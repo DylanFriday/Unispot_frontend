@@ -11,6 +11,7 @@ import Input from '../../components/Input'
 import Alert from '../../components/Alert'
 import Spinner from '../../components/Spinner'
 import EmptyState from '../../components/EmptyState'
+import { formatBahtFromCents } from '../../utils/money'
 
 const statusOptions: LeaseListingStatus[] = [
   'PENDING',
@@ -115,8 +116,12 @@ const LeaseModerationPage = () => {
                 {listing.title}
               </td>
               <td className="px-4 py-3">{listing.location}</td>
-              <td className="px-4 py-3">{listing.rentCents}</td>
-              <td className="px-4 py-3">{listing.depositCents}</td>
+              <td className="px-4 py-3">
+                {formatBahtFromCents(listing.rentCents)}
+              </td>
+              <td className="px-4 py-3">
+                {formatBahtFromCents(listing.depositCents)}
+              </td>
               <td className="px-4 py-3">{listing.startDate}</td>
               <td className="px-4 py-3">{listing.endDate}</td>
               <td className="px-4 py-3">

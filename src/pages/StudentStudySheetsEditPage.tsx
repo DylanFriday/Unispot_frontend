@@ -13,6 +13,7 @@ import Button from '../components/Button'
 import Alert from '../components/Alert'
 import Spinner from '../components/Spinner'
 import EmptyState from '../components/EmptyState'
+import { formatBahtFromCents, toCents } from '../utils/money'
 
 const schema = z.object({
   title: z.string().min(3, 'Title is required'),
@@ -55,7 +56,7 @@ const StudentStudySheetsEditPage = () => {
       title: sheet.title,
       description: sheet.description,
       fileUrl: sheet.fileUrl,
-      price: String(sheet.priceCents),
+      price: formatBahtFromCents(sheet.priceCents),
       courseId: String(sheet.courseId),
     })
   }, [reset, sheet])
@@ -74,7 +75,7 @@ const StudentStudySheetsEditPage = () => {
       title: values.title,
       description: values.description,
       fileUrl: values.fileUrl,
-      priceCents: Number(values.price),
+      priceCents: toCents(values.price),
       courseId: Number(values.courseId),
     })
   }
@@ -139,7 +140,7 @@ const StudentStudySheetsEditPage = () => {
             />
             <div className="grid gap-4 md:grid-cols-2">
               <Input
-                label="Price"
+                label="Price (Baht)"
                 type="number"
                 error={errors.price?.message}
                 {...register('price')}

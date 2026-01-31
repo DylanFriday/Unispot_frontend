@@ -10,6 +10,7 @@ import Input from '../../components/Input'
 import Alert from '../../components/Alert'
 import Spinner from '../../components/Spinner'
 import EmptyState from '../../components/EmptyState'
+import { formatBahtFromCents } from '../../utils/money'
 
 const headers = [
   'ID',
@@ -78,7 +79,7 @@ const StudySheetModerationPage = () => {
               <td className="px-4 py-3">{sheet.title}</td>
               <td className="px-4 py-3">{sheet.courseId}</td>
               <td className="px-4 py-3">{sheet.ownerId}</td>
-              <td className="px-4 py-3">{sheet.priceCents}</td>
+              <td className="px-4 py-3">{formatBahtFromCents(sheet.priceCents)}</td>
               <td className="px-4 py-3">{sheet.createdAt}</td>
               <td className="px-4 py-3">
                 <div className="flex flex-wrap gap-2">

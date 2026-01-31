@@ -12,8 +12,11 @@ import Alert from '../components/Alert'
 import Spinner from '../components/Spinner'
 import EmptyState from '../components/EmptyState'
 import Modal from '../components/Modal'
+import { QRCodeCanvas } from 'qrcode.react'
+import { buildPromptPayPayload } from '../utils/promptpay'
+import { formatBahtFromCents } from '../utils/money'
 
-const formatPrice = (value: number) => `$${(value / 100).toFixed(2)}`
+const formatPrice = (value: number) => formatBahtFromCents(value)
 
 const StudySheetsPublicPage = () => {
   const { me } = useAuth()
@@ -157,36 +160,76 @@ const StudySheetsPublicPage = () => {
       >
         {purchaseData ? (
           <div className="space-y-3">
-            <div className="rounded-md border border-gray-200 bg-gray-50 p-3 text-sm">
-              <p>
-                <span className="font-semibold">Reference Code:</span>{' '}
-                {purchaseData.referenceCode}
-              </p>
-              <p>
-                <span className="font-semibold">Amount (cents):</span>{' '}
-                {purchaseData.amountCents}
-              </p>
-              <p className="break-all">
-                <span className="font-semibold">PromptPay:</span>{' '}
-                {purchaseData.promptpayPayload}
-              </p>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="secondary"
-                onClick={() => handleCopy(purchaseData.referenceCode)}
-              >
-                Copy reference
-              </Button>
-              <Button
-                variant="secondary"
-                onClick={() =>
-                  handleCopy(purchaseData.promptpayPayload)
-                }
-              >
-                Copy PromptPay
-              </Button>
-            </div>
+            {(() => {
+              const receiver = import.meta.env.VITE_PROMPTPAY_PHONE as
+                | string
+                | undefined
+              const amountBaht = Number(formatBahtFromCents(purchaseData.amountCents))
+              const payload =
+                receiver && receiver.trim().length > 0
+                  ? buildPromptPayPayload({
+                      phoneOrId: receiver.trim(),
+                      amountBaht,
+                    })
+                  : ''
+              return (
+                <>
+                  <div className="flex flex-col items-center gap-3 rounded-md border border-gray-200 bg-white p-4">
+                    {payload ? (
+                      <QRCodeCanvas value={payload} size={200} />
+                    ) : (
+                      <p className="text-sm text-red-600">
+                        Missing VITE_PROMPTPAY_PHONE
+                      </p>
+                    )}
+                    <p className="text-xs text-gray-500">
+                      Scan with Thai banking apps
+                    </p>
+                    {receiver ? (
+                      <div className="text-xs text-gray-600">
+                        <div className="font-mono">
+                          Using phone: {receiver}
+                        </div>
+                        {payload ? (
+                          <div className="font-mono">
+                            Payload prefix: {payload.slice(0, 50)}...
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : null}
+                  </div>
+                  <div className="rounded-md border border-gray-200 bg-gray-50 p-3 text-sm">
+                    <p>
+                      <span className="font-semibold">Reference Code:</span>{' '}
+                      {purchaseData.referenceCode}
+                    </p>
+                    <p>
+                      <span className="font-semibold">Amount (cents):</span>{' '}
+                      {purchaseData.amountCents}
+                    </p>
+                    <p className="break-all">
+                      <span className="font-semibold">PromptPay EMV:</span>{' '}
+                      {payload || 'Missing VITE_PROMPTPAY_PHONE'}
+                    </p>
+                  </div>
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      variant="secondary"
+                      onClick={() => handleCopy(purchaseData.referenceCode)}
+                    >
+                      Copy reference
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => payload && handleCopy(payload)}
+                      disabled={!payload}
+                    >
+                      Copy PromptPay
+                    </Button>
+                  </div>
+                </>
+              )
+            })()}
             {copyMessage ? (
               <Alert message={copyMessage} tone="info" />
             ) : null}

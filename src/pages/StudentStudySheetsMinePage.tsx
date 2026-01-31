@@ -11,6 +11,7 @@ import Modal from '../components/Modal'
 import Alert from '../components/Alert'
 import Spinner from '../components/Spinner'
 import EmptyState from '../components/EmptyState'
+import { formatBahtFromCents } from '../utils/money'
 
 const statusVariant = (status: string) => {
   if (status === 'APPROVED') return 'success'
@@ -71,7 +72,7 @@ const StudentStudySheetsMinePage = () => {
               </div>
               <div className="text-sm text-gray-600">
                 <p>Course ID: {sheet.courseId}</p>
-                <p>Price: ${(sheet.priceCents / 100).toFixed(2)}</p>
+                <p>Price: {formatBahtFromCents(sheet.priceCents)}</p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <Link to={`/student/study-sheets/${sheet.id}/edit`}>

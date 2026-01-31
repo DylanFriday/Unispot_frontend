@@ -12,6 +12,7 @@ import Modal from '../components/Modal'
 import Alert from '../components/Alert'
 import Spinner from '../components/Spinner'
 import EmptyState from '../components/EmptyState'
+import { formatBahtFromCents } from '../utils/money'
 
 const statusVariant = (status: string) => {
   if (status === 'APPROVED') return 'success'
@@ -20,7 +21,7 @@ const statusVariant = (status: string) => {
   return 'danger'
 }
 
-const formatCents = (value: number) => `$${(value / 100).toFixed(2)}`
+  const formatCents = (value: number) => formatBahtFromCents(value)
 
 const StudentLeaseListingsMinePage = () => {
   const { me } = useAuth()

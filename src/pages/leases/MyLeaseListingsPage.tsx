@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import { z } from 'zod'
@@ -14,6 +14,7 @@ import Input from '../../components/Input'
 import Alert from '../../components/Alert'
 import Spinner from '../../components/Spinner'
 import EmptyState from '../../components/EmptyState'
+import { formatBahtFromCents, toCents } from '../../utils/money'
 
 const statusVariant = (status: string) => {
   if (status === 'APPROVED') return 'success'
@@ -57,6 +58,12 @@ const MyLeaseListingsPage = () => {
   const [editingListing, setEditingListing] = useState<LeaseListingDto | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<LeaseListingDto | null>(null)
   const [transferTarget, setTransferTarget] = useState<LeaseListingDto | null>(null)
+  const [feedback, setFeedback] = useState<{
+    type: 'success' | 'error'
+    message: string
+  } | null>(null)
+  const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null)
+  const [pendingTransferId, setPendingTransferId] = useState<number | null>(null)
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['leases', 'mine'],
@@ -90,8 +97,8 @@ const MyLeaseListingsPage = () => {
       title: listing.title,
       description: listing.description,
       location: listing.location,
-      rentCents: String(listing.rentCents),
-      depositCents: String(listing.depositCents),
+      rentCents: formatBahtFromCents(listing.rentCents),
+      depositCents: formatBahtFromCents(listing.depositCents),
       startDate: listing.startDate.slice(0, 10),
       endDate: listing.endDate.slice(0, 10),
     })
@@ -126,17 +133,39 @@ const MyLeaseListingsPage = () => {
 
   const deleteMutation = useMutation({
     mutationFn: (id: number) => leasesApi.deleteLease(id),
+    onMutate: (id) => {
+      setPendingDeleteId(id)
+    },
     onSuccess: () => {
       setDeleteTarget(null)
+      setPendingDeleteId(null)
+      setFeedback({ type: 'success', message: 'Listing deleted' })
       void queryClient.invalidateQueries({ queryKey: ['leases', 'mine'] })
+    },
+    onError: (err) => {
+      setPendingDeleteId(null)
+      const message = (err as { response?: { data?: ApiError } })?.response
+        ?.data?.message
+      setFeedback({ type: 'error', message: message ?? 'Delete failed' })
     },
   })
 
   const transferMutation = useMutation({
     mutationFn: (id: number) => leasesApi.transferLease(id),
+    onMutate: (id) => {
+      setPendingTransferId(id)
+    },
     onSuccess: () => {
       setTransferTarget(null)
+      setPendingTransferId(null)
+      setFeedback({ type: 'success', message: 'Lease transferred' })
       void queryClient.invalidateQueries({ queryKey: ['leases', 'mine'] })
+    },
+    onError: (err) => {
+      setPendingTransferId(null)
+      const message = (err as { response?: { data?: ApiError } })?.response
+        ?.data?.message
+      setFeedback({ type: 'error', message: message ?? 'Transfer failed' })
     },
   })
 
@@ -145,8 +174,8 @@ const MyLeaseListingsPage = () => {
       title: values.title,
       description: values.description,
       location: values.location,
-      rentCents: Number(values.rentCents),
-      depositCents: Number(values.depositCents),
+      rentCents: toCents(values.rentCents),
+      depositCents: toCents(values.depositCents),
       startDate: toIso(values.startDate),
       endDate: toIso(values.endDate),
     }
@@ -173,6 +202,12 @@ const MyLeaseListingsPage = () => {
         subtitle="Create and manage your lease listings."
         action={<Button onClick={openCreate}>Create listing</Button>}
       />
+      {feedback ? (
+        <Alert
+          message={feedback.message}
+          tone={feedback.type === 'success' ? 'info' : 'error'}
+        />
+      ) : null}
 
       {isLoading ? (
         <div className="flex min-h-[40vh] items-center justify-center">
@@ -188,8 +223,12 @@ const MyLeaseListingsPage = () => {
                 {listing.title}
               </td>
               <td className="px-4 py-3">{listing.location}</td>
-              <td className="px-4 py-3">{listing.rentCents}</td>
-              <td className="px-4 py-3">{listing.depositCents}</td>
+              <td className="px-4 py-3">
+                {formatBahtFromCents(listing.rentCents)}
+              </td>
+              <td className="px-4 py-3">
+                {formatBahtFromCents(listing.depositCents)}
+              </td>
               <td className="px-4 py-3">{listing.startDate}</td>
               <td className="px-4 py-3">{listing.endDate}</td>
               <td className="px-4 py-3">
@@ -198,15 +237,25 @@ const MyLeaseListingsPage = () => {
               <td className="px-4 py-3">{listing.createdAt}</td>
               <td className="px-4 py-3">
                 <div className="flex flex-wrap gap-2">
-                  <Button variant="secondary" onClick={() => openEdit(listing)}>
+                  <Button
+                    variant="secondary"
+                    onClick={() => openEdit(listing)}
+                    disabled={listing.status === 'TRANSFERRED'}
+                  >
                     Edit
                   </Button>
-                  <Button variant="danger" onClick={() => setDeleteTarget(listing)}>
+                  <Button
+                    variant="danger"
+                    onClick={() => setDeleteTarget(listing)}
+                    disabled={listing.status === 'TRANSFERRED'}
+                  >
                     Delete
                   </Button>
-                  <Button onClick={() => setTransferTarget(listing)}>
-                    Transfer
-                  </Button>
+                  {listing.status === 'APPROVED' ? (
+                    <Button onClick={() => setTransferTarget(listing)}>
+                      Transfer
+                    </Button>
+                  ) : null}
                 </div>
               </td>
             </tr>
@@ -268,13 +317,13 @@ const MyLeaseListingsPage = () => {
           />
           <div className="grid gap-4 md:grid-cols-2">
             <Input
-              label="Rent (cents)"
+              label="Rent (Baht)"
               type="number"
               error={errors.rentCents?.message}
               {...register('rentCents')}
             />
             <Input
-              label="Deposit (cents)"
+              label="Deposit (Baht)"
               type="number"
               error={errors.depositCents?.message}
               {...register('depositCents')}
@@ -299,7 +348,7 @@ const MyLeaseListingsPage = () => {
 
       <Modal
         open={Boolean(deleteTarget)}
-        title="Delete lease listing"
+        title="Delete listing?"
         onClose={() => setDeleteTarget(null)}
         footer={
           <div className="flex gap-2">
@@ -309,9 +358,13 @@ const MyLeaseListingsPage = () => {
             <Button
               variant="danger"
               onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget.id)}
-              disabled={deleteMutation.isPending}
+              disabled={
+                deleteMutation.isPending && pendingDeleteId === deleteTarget?.id
+              }
             >
-              {deleteMutation.isPending ? 'Deleting...' : 'Delete'}
+              {deleteMutation.isPending && pendingDeleteId === deleteTarget?.id
+                ? 'Deleting...'
+                : 'Delete'}
             </Button>
           </div>
         }
@@ -321,7 +374,7 @@ const MyLeaseListingsPage = () => {
 
       <Modal
         open={Boolean(transferTarget)}
-        title="Transfer lease listing"
+        title="Transfer Lease?"
         onClose={() => setTransferTarget(null)}
         footer={
           <div className="flex gap-2">
@@ -330,14 +383,20 @@ const MyLeaseListingsPage = () => {
             </Button>
             <Button
               onClick={() => transferTarget && transferMutation.mutate(transferTarget.id)}
-              disabled={transferMutation.isPending}
+              disabled={
+                transferMutation.isPending &&
+                pendingTransferId === transferTarget?.id
+              }
             >
-              {transferMutation.isPending ? 'Transferring...' : 'Transfer'}
+              {transferMutation.isPending &&
+              pendingTransferId === transferTarget?.id
+                ? 'Transferring...'
+                : 'Transfer'}
             </Button>
           </div>
         }
       >
-        Confirm transfer of this lease listing.
+        This will mark the listing as TRANSFERRED and remove it from the marketplace.
       </Modal>
     </div>
   )

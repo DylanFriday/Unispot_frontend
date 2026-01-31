@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { leasesApi } from '../../api/leases.api'
 import type { ApiError } from '../../types/dto'
 import { useAuth } from '../../auth/useAuth'
@@ -10,6 +10,7 @@ import Button from '../../components/Button'
 import Alert from '../../components/Alert'
 import Spinner from '../../components/Spinner'
 import EmptyState from '../../components/EmptyState'
+import { formatBahtFromCents } from '../../utils/money'
 
 const statusVariant = (status: string) => {
   if (status === 'APPROVED') return 'success'
@@ -20,12 +21,12 @@ const statusVariant = (status: string) => {
 
 const LeaseMarketplacePage = () => {
   const { me } = useAuth()
+  const queryClient = useQueryClient()
   const [requestedIds, setRequestedIds] = useState<Set<number>>(new Set())
   const [pendingId, setPendingId] = useState<number | null>(null)
-  const [feedback, setFeedback] = useState<{
-    type: 'success' | 'error'
-    message: string
-  } | null>(null)
+  const [feedback, setFeedback] = useState<
+    Record<number, { type: 'success' | 'error'; message: string }>
+  >({})
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['leases', 'marketplace'],
@@ -40,7 +41,11 @@ const LeaseMarketplacePage = () => {
     onSuccess: (_, id) => {
       setRequestedIds((prev) => new Set(prev).add(id))
       setPendingId(null)
-      setFeedback({ type: 'success', message: 'Interest sent ✅' })
+      setFeedback((prev) => ({
+        ...prev,
+        [id]: { type: 'success', message: 'Interest sent ✅' },
+      }))
+      void queryClient.invalidateQueries({ queryKey: ['leases', 'marketplace'] })
     },
     onError: (err, id) => {
       setPendingId(null)
@@ -49,14 +54,20 @@ const LeaseMarketplacePage = () => {
       const message = (err as { response?: { data?: ApiError } })?.response
         ?.data?.message
       if (status === 409 || message?.toLowerCase().includes('already')) {
-        setFeedback({ type: 'error', message: 'Already requested' })
+        setFeedback((prev) => ({
+          ...prev,
+          [id]: { type: 'error', message: 'You already expressed interest.' },
+        }))
         setRequestedIds((prev) => new Set(prev).add(id))
         return
       }
-      setFeedback({
-        type: 'error',
-        message: message ?? 'Failed to send interest request',
-      })
+      setFeedback((prev) => ({
+        ...prev,
+        [id]: {
+          type: 'error',
+          message: message ?? 'Failed to send interest request',
+        },
+      }))
     },
   })
 
@@ -69,12 +80,6 @@ const LeaseMarketplacePage = () => {
         title="Leases Marketplace"
         subtitle="Browse approved lease listings." 
       />
-      {feedback ? (
-        <Alert
-          message={feedback.message}
-          tone={feedback.type === 'success' ? 'info' : 'error'}
-        />
-      ) : null}
 
       {isLoading ? (
         <div className="flex min-h-[40vh] items-center justify-center">
@@ -98,28 +103,40 @@ const LeaseMarketplacePage = () => {
               <p className="text-sm text-gray-600">{listing.description}</p>
               <div className="text-sm text-gray-600">
                 <p>Location: {listing.location}</p>
-                <p>Rent: {listing.rentCents}</p>
-                <p>Deposit: {listing.depositCents}</p>
+                <p>Rent: {formatBahtFromCents(listing.rentCents)}</p>
+                <p>Deposit: {formatBahtFromCents(listing.depositCents)}</p>
                 <p>
                   Dates: {listing.startDate} → {listing.endDate}
                 </p>
                 <p>Created: {listing.createdAt}</p>
               </div>
+              {feedback[listing.id] ? (
+                <Alert
+                  message={feedback[listing.id].message}
+                  tone={feedback[listing.id].type === 'success' ? 'info' : 'error'}
+                />
+              ) : null}
               {me?.role === 'STUDENT' ? (
-                <Button
-                  onClick={() => interestMutation.mutate(listing.id)}
-                  disabled={
-                    interestMutation.isPending && pendingId === listing.id
-                      ? true
-                      : requestedIds.has(listing.id)
-                  }
-                >
-                  {requestedIds.has(listing.id)
-                    ? 'Requested'
-                    : interestMutation.isPending && pendingId === listing.id
-                      ? 'Sending...'
-                      : 'Interested'}
-                </Button>
+                listing.status === 'APPROVED' ? (
+                  <Button
+                    onClick={() => interestMutation.mutate(listing.id)}
+                    disabled={
+                      interestMutation.isPending && pendingId === listing.id
+                        ? true
+                        : requestedIds.has(listing.id)
+                    }
+                  >
+                    {requestedIds.has(listing.id)
+                      ? 'Requested'
+                      : interestMutation.isPending && pendingId === listing.id
+                        ? 'Sending...'
+                        : 'Express Interest'}
+                  </Button>
+                ) : (
+                  <p className="text-xs text-gray-500">
+                    Interest available only for approved listings.
+                  </p>
+                )
               ) : null}
             </Card>
           ))}

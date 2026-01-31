@@ -10,6 +10,7 @@ import Card from '../components/Card'
 import Input from '../components/Input'
 import Button from '../components/Button'
 import Alert from '../components/Alert'
+import { toCents } from '../utils/money'
 
 const schema = z.object({
   title: z.string().min(3, 'Title is required'),
@@ -56,8 +57,8 @@ const StudentLeaseListingsNewPage = () => {
       title: values.title,
       description: values.description,
       location: values.location,
-      rentCents: Number(values.rentCents),
-      depositCents: Number(values.depositCents),
+      rentCents: toCents(values.rentCents),
+      depositCents: toCents(values.depositCents),
       startDate: toIso(values.startDate),
       endDate: toIso(values.endDate),
     })
@@ -92,13 +93,13 @@ const StudentLeaseListingsNewPage = () => {
           />
           <div className="grid gap-4 md:grid-cols-2">
             <Input
-              label="Rent (cents)"
+              label="Rent (Baht)"
               type="number"
               error={errors.rentCents?.message}
               {...register('rentCents')}
             />
             <Input
-              label="Deposit (cents)"
+              label="Deposit (Baht)"
               type="number"
               error={errors.depositCents?.message}
               {...register('depositCents')}

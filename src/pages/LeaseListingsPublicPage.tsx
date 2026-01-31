@@ -9,8 +9,9 @@ import Button from '../components/Button'
 import Alert from '../components/Alert'
 import Spinner from '../components/Spinner'
 import EmptyState from '../components/EmptyState'
+import { formatBahtFromCents } from '../utils/money'
 
-const formatCents = (value: number) => `$${(value / 100).toFixed(2)}`
+const formatCents = (value: number) => formatBahtFromCents(value)
 
 const LeaseListingsPublicPage = () => {
   const { me } = useAuth()

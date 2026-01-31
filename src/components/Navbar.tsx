@@ -30,9 +30,14 @@ const Navbar = () => {
             </>
           ) : null}
           {me && (me.role === 'STAFF' || me.role === 'ADMIN') ? (
-            <Link to="/moderation/lease-listings" className="hover:text-gray-900">
-              Lease Moderation
-            </Link>
+            <>
+              <Link to="/moderation/study-sheets" className="hover:text-gray-900">
+                Study Sheet Moderation
+              </Link>
+              <Link to="/moderation/lease-listings" className="hover:text-gray-900">
+                Lease Moderation
+              </Link>
+            </>
           ) : null}
           {me?.role === 'STUDENT' ? (
             <Link to="/leases/mine" className="hover:text-gray-900">

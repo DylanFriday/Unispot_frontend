@@ -11,10 +11,14 @@ const Sidebar = () => {
       ? [
           { to: '/admin', label: 'Admin Dashboard' },
           { to: '/admin/payments', label: 'Payments' },
+          { to: '/moderation/study-sheets', label: 'Study Sheets' },
           { to: '/moderation/lease-listings', label: 'Lease Listings' },
         ]
       : me.role === 'STAFF'
-        ? [{ to: '/moderation/lease-listings', label: 'Lease Listings' }]
+        ? [
+            { to: '/moderation/study-sheets', label: 'Study Sheets' },
+            { to: '/moderation/lease-listings', label: 'Lease Listings' },
+          ]
         : [
             { to: '/student', label: 'Dashboard' },
             { to: '/student/study-sheets/mine', label: 'My Study Sheets' },

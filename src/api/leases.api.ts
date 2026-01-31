@@ -50,7 +50,7 @@ export const leasesApi = {
   },
   expressInterest: async (id: number) => {
     const response = await http.post(`/lease-listings/${id}/interest`)
-    return response.data
+    return response.data  
   },
   transferLease: async (id: number) => {
     const response = await http.post(`/lease-listings/${id}/transfer`)

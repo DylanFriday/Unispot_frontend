@@ -10,6 +10,7 @@ import Card from '../components/Card'
 import Input from '../components/Input'
 import Button from '../components/Button'
 import Alert from '../components/Alert'
+import { toCents } from '../utils/money'
 
 const schema = z.object({
   title: z.string().min(3, 'Title is required'),
@@ -47,7 +48,7 @@ const StudentStudySheetsNewPage = () => {
       title: values.title,
       description: values.description,
       fileUrl: values.fileUrl,
-      priceCents: Number(values.price),
+      priceCents: toCents(values.price),
       courseId: Number(values.courseId),
     })
   }
@@ -81,7 +82,7 @@ const StudentStudySheetsNewPage = () => {
           />
           <div className="grid gap-4 md:grid-cols-2">
             <Input
-              label="Price"
+              label="Price (Baht)"
               type="number"
               error={errors.price?.message}
               {...register('price')}
