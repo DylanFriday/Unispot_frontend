@@ -33,12 +33,29 @@ export interface StudySheetDto {
   title: string
   description: string
   fileUrl: string
-  priceCents: number
+  price: number
   status: StudySheetStatus
   createdAt: string
   updatedAt: string
-  courseId: number
+  courseId?: number
+  courseCode?: string
   ownerId: number
+}
+
+export interface StudySheetCreateRequest {
+  title: string
+  description: string
+  fileUrl: string
+  priceCents: number
+  courseCode: string
+}
+
+export interface StudySheetUpdateRequest {
+  title?: string
+  description?: string
+  fileUrl?: string
+  priceCents?: number
+  courseCode?: string
 }
 
 export type LeaseListingStatus =
@@ -87,6 +104,38 @@ export interface ReviewDto {
   updatedAt: string
   studentId: number
   courseId: number
+}
+
+export interface TeacherDto {
+  id: number
+  name: string
+}
+
+export interface TeacherReviewDto {
+  id: number
+  rating: number
+  text: string
+  status: ReviewStatus
+  createdAt: string
+  updatedAt: string
+  studentId: number
+  courseId: number
+  teacherId?: number
+  teacherName: string
+  upvotes?: number
+}
+
+export type TeacherSuggestionStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
+
+export interface TeacherSuggestionDto {
+  id: number
+  courseId: number
+  teacherName: string
+  status: TeacherSuggestionStatus
+  suggestedById: number
+  createdAt: string
+  updatedAt: string
+  reason?: string | null
 }
 
 export type PaymentStatus = 'PENDING' | 'APPROVED' | 'RELEASED'

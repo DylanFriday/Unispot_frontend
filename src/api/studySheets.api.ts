@@ -1,10 +1,15 @@
 import http from './http'
-import type { StudySheetDto, StudySheetPurchaseResponse } from '../types/dto'
+import type {
+  StudySheetCreateRequest,
+  StudySheetDto,
+  StudySheetPurchaseResponse,
+  StudySheetUpdateRequest,
+} from '../types/dto'
 
 export const studySheetsApi = {
-  list: async (courseId?: number) => {
+  list: async (courseCode?: string) => {
     const response = await http.get<StudySheetDto[]>('/study-sheets', {
-      params: courseId ? { courseId } : undefined,
+      params: courseCode ? { courseCode } : undefined,
     })
     return response.data
   },
@@ -12,17 +17,11 @@ export const studySheetsApi = {
     const response = await http.get<StudySheetDto[]>('/study-sheets/mine')
     return response.data
   },
-  create: async (payload: {
-    title: string
-    description: string
-    fileUrl: string
-    priceCents: number
-    courseId: number
-  }) => {
+  create: async (payload: StudySheetCreateRequest) => {
     const response = await http.post<StudySheetDto>('/study-sheets', payload)
     return response.data
   },
-  update: async (id: number, payload: Partial<StudySheetDto>) => {
+  update: async (id: number, payload: StudySheetUpdateRequest) => {
     const response = await http.patch<StudySheetDto>(`/study-sheets/${id}`, payload)
     return response.data
   },

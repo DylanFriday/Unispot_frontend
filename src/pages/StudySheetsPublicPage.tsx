@@ -16,7 +16,8 @@ import { QRCodeCanvas } from 'qrcode.react'
 import { buildPromptPayPayload } from '../utils/promptpay'
 import { formatBahtFromCents } from '../utils/money'
 
-const formatPrice = (value: number) => formatBahtFromCents(value)
+const formatPrice = (value?: number | null) =>
+  value == null ? '-' : formatBahtFromCents(value)
 
 const StudySheetsPublicPage = () => {
   const { me } = useAuth()
@@ -26,20 +27,17 @@ const StudySheetsPublicPage = () => {
   >(null)
   const [copyMessage, setCopyMessage] = useState<string | null>(null)
 
-  const courseIdParam = searchParams.get('courseId')?.trim() ?? ''
-  const parsedCourseId = courseIdParam ? Number(courseIdParam) : undefined
-  const appliedCourseId = Number.isFinite(parsedCourseId)
-    ? parsedCourseId
-    : undefined
+  const courseCodeParam = searchParams.get('courseCode')?.trim() ?? ''
+  const appliedCourseCode = courseCodeParam ? courseCodeParam : undefined
 
   const queryKey = useMemo(
-    () => ['study-sheets', appliedCourseId],
-    [appliedCourseId]
+    () => ['study-sheets', appliedCourseCode],
+    [appliedCourseCode]
   )
 
   const { data, isLoading, error, refetch } = useQuery({
     queryKey,
-    queryFn: () => studySheetsApi.list(appliedCourseId),
+    queryFn: () => studySheetsApi.list(appliedCourseCode),
   })
 
   const purchaseMutation = useMutation({
@@ -56,7 +54,7 @@ const StudySheetsPublicPage = () => {
       setSearchParams({})
       return
     }
-    setSearchParams({ courseId: next })
+    setSearchParams({ courseCode: next.toUpperCase() })
   }
 
   const handleCopy = async (value: string) => {
@@ -79,11 +77,11 @@ const StudySheetsPublicPage = () => {
         action={
           <div className="flex flex-wrap gap-2">
             <Input
-              placeholder="Filter by course ID"
-              value={courseIdParam}
+              placeholder="Filter by course code"
+              value={courseCodeParam}
               onChange={(event) => handleFilterChange(event.target.value)}
             />
-            {appliedCourseId ? (
+            {appliedCourseCode ? (
               <Button
                 variant="secondary"
                 onClick={() => {
@@ -117,8 +115,10 @@ const StudySheetsPublicPage = () => {
                 <p className="text-sm text-gray-600">{sheet.description}</p>
               </div>
               <div className="text-sm text-gray-600">
-                <p>Course ID: {sheet.courseId}</p>
-                <p>Price: {formatPrice(sheet.priceCents)}</p>
+                <p>
+                  Course: {sheet.courseCode ?? sheet.courseId ?? '-'}
+                </p>
+                <p>Price: {formatPrice(sheet.price)}</p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <a

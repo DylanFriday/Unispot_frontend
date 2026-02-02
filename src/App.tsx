@@ -11,7 +11,7 @@ import StudentPage from './pages/StudentPage'
 import ModerationPage from './pages/ModerationPage'
 import StudySheetsPublicPage from './pages/StudySheetsPublicPage'
 import LeaseListingsPublicPage from './pages/LeaseListingsPublicPage'
-import CourseReviewsPage from './pages/CourseReviewsPage'
+import CourseReviewsPage from './pages/reviews/CourseReviewsPage'
 import StudentStudySheetsMinePage from './pages/StudentStudySheetsMinePage'
 import StudentStudySheetsNewPage from './pages/StudentStudySheetsNewPage'
 import StudentStudySheetsEditPage from './pages/StudentStudySheetsEditPage'
@@ -23,6 +23,10 @@ import AdminDashboardPage from './pages/admin/AdminDashboardPage'
 import PaymentsPage from './pages/admin/PaymentsPage'
 import LeaseMarketplacePage from './pages/leases/LeaseMarketplacePage'
 import MyLeaseListingsPage from './pages/leases/MyLeaseListingsPage'
+import CoursesPage from './pages/courses/CoursesPage'
+import ReviewModerationPage from './pages/moderation/ReviewModerationPage'
+import TeacherReviewModerationPage from './pages/moderation/TeacherReviewModerationPage'
+import TeacherSuggestionModerationPage from './pages/moderation/TeacherSuggestionModerationPage'
 
 const App = () => {
   return (
@@ -149,6 +153,42 @@ const App = () => {
           }
         />
         <Route
+          path="/moderation/reviews"
+          element={
+            <ProtectedRoute>
+              <RoleRoute allow={['STAFF', 'ADMIN']}>
+                <AppShell>
+                  <ReviewModerationPage />
+                </AppShell>
+              </RoleRoute>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/moderation/teacher-reviews"
+          element={
+            <ProtectedRoute>
+              <RoleRoute allow={['STAFF', 'ADMIN']}>
+                <AppShell>
+                  <TeacherReviewModerationPage />
+                </AppShell>
+              </RoleRoute>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/moderation/teacher-suggestions"
+          element={
+            <ProtectedRoute>
+              <RoleRoute allow={['STAFF', 'ADMIN']}>
+                <AppShell>
+                  <TeacherSuggestionModerationPage />
+                </AppShell>
+              </RoleRoute>
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/admin/*"
           element={
             <ProtectedRoute>
@@ -217,10 +257,18 @@ const App = () => {
           }
         />
         <Route
-          path="/courses/:id/reviews"
+          path="/courses/:courseId/reviews"
           element={
             <AppShell>
               <CourseReviewsPage />
+            </AppShell>
+          }
+        />
+        <Route
+          path="/courses"
+          element={
+            <AppShell>
+              <CoursesPage />
             </AppShell>
           }
         />

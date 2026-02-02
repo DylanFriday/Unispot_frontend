@@ -17,7 +17,7 @@ const schema = z.object({
   description: z.string().min(5, 'Description is required'),
   fileUrl: z.string().url('Enter a valid file URL'),
   price: z.string().min(1, 'Price is required'),
-  courseId: z.string().min(1, 'Course ID is required'),
+  courseCode: z.string().min(1, 'Course code is required'),
 })
 
 type FormValues = z.infer<typeof schema>
@@ -36,7 +36,7 @@ const StudentStudySheetsNewPage = () => {
       description: string
       fileUrl: string
       priceCents: number
-      courseId: number
+      courseCode: string
     }) => studySheetsApi.create(payload),
     onSuccess: () => {
       navigate('/student/study-sheets/mine', { replace: true })
@@ -49,7 +49,7 @@ const StudentStudySheetsNewPage = () => {
       description: values.description,
       fileUrl: values.fileUrl,
       priceCents: toCents(values.price),
-      courseId: Number(values.courseId),
+      courseCode: values.courseCode.trim().toUpperCase(),
     })
   }
 
@@ -88,10 +88,10 @@ const StudentStudySheetsNewPage = () => {
               {...register('price')}
             />
             <Input
-              label="Course ID"
-              type="number"
-              error={errors.courseId?.message}
-              {...register('courseId')}
+              label="Course Code"
+              placeholder="eg.CSX3003"
+              error={errors.courseCode?.message}
+              {...register('courseCode')}
             />
           </div>
           <Button type="submit" disabled={mutation.isPending}>

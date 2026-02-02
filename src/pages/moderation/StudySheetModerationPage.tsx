@@ -79,7 +79,9 @@ const StudySheetModerationPage = () => {
               <td className="px-4 py-3">{sheet.title}</td>
               <td className="px-4 py-3">{sheet.courseId}</td>
               <td className="px-4 py-3">{sheet.ownerId}</td>
-              <td className="px-4 py-3">{formatBahtFromCents(sheet.priceCents)}</td>
+              <td className="px-4 py-3">
+                {sheet.price == null ? '-' : formatBahtFromCents(sheet.price)}
+              </td>
               <td className="px-4 py-3">{sheet.createdAt}</td>
               <td className="px-4 py-3">
                 <div className="flex flex-wrap gap-2">

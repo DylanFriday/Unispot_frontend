@@ -71,8 +71,15 @@ const StudentStudySheetsMinePage = () => {
                 <Badge label={sheet.status} variant={statusVariant(sheet.status)} />
               </div>
               <div className="text-sm text-gray-600">
-                <p>Course ID: {sheet.courseId}</p>
-                <p>Price: {formatBahtFromCents(sheet.priceCents)}</p>
+                <p>
+                  Course: {sheet.courseCode ?? sheet.courseId ?? '-'}
+                </p>
+                <p>
+                  Price:{' '}
+                  {sheet.price == null
+                    ? '-'
+                    : formatBahtFromCents(sheet.price)}
+                </p>
               </div>
               <div className="flex flex-wrap gap-2">
                 <Link to={`/student/study-sheets/${sheet.id}/edit`}>
