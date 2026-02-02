@@ -217,15 +217,14 @@ const CourseReviewsPage = () => {
     return withIndex.map(({ review }) => review)
   }, [courseReviews, courseSort])
 
-  const teacherMode = me?.role === 'STUDENT' ? 'me' : 'public'
   const {
     data: teacherReviews,
     isLoading: isTeacherLoading,
     error: teacherError,
     refetch: refetchTeacherReviews,
   } = useQuery({
-    queryKey: ['courseTeacherReviews', courseId, teacherMode, me?.id],
-    queryFn: () => teacherReviewsApi.listCourseTeacherReviews(courseId, teacherMode),
+    queryKey: ['courseTeacherReviews', courseId, me?.id, me?.role],
+    queryFn: () => teacherReviewsApi.listByCourse(courseId),
     enabled: Number.isFinite(courseId),
   })
 
@@ -246,14 +245,14 @@ const CourseReviewsPage = () => {
       teacherName: string
       rating: number
       text: string
-    }) => teacherReviewsApi.createTeacherReview(payload),
+    }) => teacherReviewsApi.create(payload),
     onSuccess: () => {
       setTeacherFeedback({ type: 'success', message: 'Submitted for moderation.' })
       setTeacherName('')
       setTeacherRating(5)
       setTeacherText('')
       void queryClient.invalidateQueries({
-        queryKey: ['courseTeacherReviews', courseId, teacherMode, me?.id],
+        queryKey: ['courseTeacherReviews', courseId, me?.id, me?.role],
       })
     },
     onError: (err) => {
@@ -273,14 +272,14 @@ const CourseReviewsPage = () => {
 
   const updateTeacherMutation = useMutation({
     mutationFn: (payload: { id: number; rating: number; text: string }) =>
-      teacherReviewsApi.updateTeacherReview(payload.id, {
+      teacherReviewsApi.update(payload.id, {
         rating: payload.rating,
         text: payload.text,
       }),
     onSuccess: () => {
       setTeacherFeedback({ type: 'success', message: 'Review updated.' })
       void queryClient.invalidateQueries({
-        queryKey: ['courseTeacherReviews', courseId, teacherMode, me?.id],
+        queryKey: ['courseTeacherReviews', courseId, me?.id, me?.role],
       })
     },
     onError: (err) => {
@@ -291,12 +290,12 @@ const CourseReviewsPage = () => {
   })
 
   const deleteTeacherMutation = useMutation({
-    mutationFn: (id: number) => teacherReviewsApi.deleteReview(id),
+    mutationFn: (id: number) => teacherReviewsApi.remove(id),
     onSuccess: () => {
       setTeacherDeleteTarget(null)
       setTeacherFeedback({ type: 'success', message: 'Review deleted.' })
       void queryClient.invalidateQueries({
-        queryKey: ['courseTeacherReviews', courseId, teacherMode, me?.id],
+        queryKey: ['courseTeacherReviews', courseId, me?.id, me?.role],
       })
     },
   })
@@ -309,7 +308,7 @@ const CourseReviewsPage = () => {
       setTeacherReportReason('')
       setTeacherFeedback({ type: 'success', message: 'Report submitted' })
       void queryClient.invalidateQueries({
-        queryKey: ['courseTeacherReviews', courseId, teacherMode, me?.id],
+        queryKey: ['courseTeacherReviews', courseId, me?.id, me?.role],
       })
     },
   })
@@ -322,7 +321,7 @@ const CourseReviewsPage = () => {
       setUpvotedIds((prev) => new Set(prev).add(id))
       setTeacherFeedback({ type: 'success', message: 'Upvoted.' })
       void queryClient.invalidateQueries({
-        queryKey: ['courseTeacherReviews', courseId, teacherMode, me?.id],
+        queryKey: ['courseTeacherReviews', courseId, me?.id, me?.role],
       })
     },
     onError: () => setTeacherPendingId(null),
@@ -339,7 +338,7 @@ const CourseReviewsPage = () => {
       })
       setTeacherFeedback({ type: 'success', message: 'Upvote removed.' })
       void queryClient.invalidateQueries({
-        queryKey: ['courseTeacherReviews', courseId, teacherMode, me?.id],
+        queryKey: ['courseTeacherReviews', courseId, me?.id, me?.role],
       })
     },
     onError: () => setTeacherPendingId(null),
@@ -349,8 +348,50 @@ const CourseReviewsPage = () => {
     ?.data?.message
   const normalizeTeacherName = (name: string) => name.trim().toLowerCase()
 
-  const teacherGroups = useMemo(() => {
+  const [teacherSort, setTeacherSort] = useState<'newest' | 'oldest' | 'highest' | 'lowest'>(
+    'newest'
+  )
+  const [groupByTeacher, setGroupByTeacher] = useState(false)
+  const [openGroups, setOpenGroups] = useState<Set<string>>(new Set())
+
+  const filteredTeacherReviews = useMemo(() => {
     if (!teacherReviews) return []
+    if (me?.role === 'STUDENT') {
+      return teacherReviews.filter(
+        (review) =>
+          review.status === 'VISIBLE' || (me?.id && review.studentId === me.id)
+      )
+    }
+    return teacherReviews.filter((review) => review.status === 'VISIBLE')
+  }, [teacherReviews, me?.id, me?.role])
+
+  const sortReviews = (reviews: TeacherReviewDto[]) => {
+    const withIndex = reviews.map((review, index) => ({ review, index }))
+    withIndex.sort((a, b) => {
+      if (teacherSort === 'newest') {
+        return (
+          new Date(b.review.createdAt).getTime() -
+            new Date(a.review.createdAt).getTime() ||
+          a.index - b.index
+        )
+      }
+      if (teacherSort === 'oldest') {
+        return (
+          new Date(a.review.createdAt).getTime() -
+            new Date(b.review.createdAt).getTime() ||
+          a.index - b.index
+        )
+      }
+      if (teacherSort === 'highest') {
+        return b.review.rating - a.review.rating || a.index - b.index
+      }
+      return a.review.rating - b.review.rating || a.index - b.index
+    })
+    return withIndex.map(({ review }) => review)
+  }
+
+  const teacherGroups = useMemo(() => {
+    if (!filteredTeacherReviews.length) return []
     const groups = new Map<
       string,
       {
@@ -360,7 +401,7 @@ const CourseReviewsPage = () => {
         average: number
       }
     >()
-    teacherReviews.forEach((review) => {
+    filteredTeacherReviews.forEach((review) => {
       const rawName = review.teacherName?.trim() || 'Unknown Teacher'
       const normalized = normalizeTeacherName(rawName)
       const existing = groups.get(normalized)
@@ -384,13 +425,14 @@ const CourseReviewsPage = () => {
         }
       })
       .sort((a, b) => a.teacherName.localeCompare(b.teacherName))
-  }, [teacherReviews])
+  }, [filteredTeacherReviews])
 
   const [selectedTeacherName, setSelectedTeacherName] = useState<string | null>(null)
   const [upvotedIds, setUpvotedIds] = useState<Set<number>>(new Set())
   const teacherParam = searchParams.get('teacher')
 
   useEffect(() => {
+    if (groupByTeacher) return
     if (teacherGroups.length === 0) return
     const normalizedParam = teacherParam ? normalizeTeacherName(teacherParam) : ''
     const match =
@@ -409,6 +451,7 @@ const CourseReviewsPage = () => {
     }
   }, [
     activeTab,
+    groupByTeacher,
     teacherGroups,
     teacherParam,
     searchParams,
@@ -423,29 +466,29 @@ const CourseReviewsPage = () => {
   }, [teacherGroups, selectedTeacherName])
 
   const myTeacherReviewForSelected = useMemo(() => {
-    if (!teacherReviews || !me?.id || !selectedTeacherName) return null
+    if (!filteredTeacherReviews.length || !me?.id || !selectedTeacherName) return null
     const normalized = normalizeTeacherName(selectedTeacherName)
     return (
-      teacherReviews.find(
+      filteredTeacherReviews.find(
         (review) =>
           review.studentId === me.id &&
           normalizeTeacherName(review.teacherName) === normalized
       ) ?? null
     )
-  }, [teacherReviews, me?.id, selectedTeacherName])
+  }, [filteredTeacherReviews, me?.id, selectedTeacherName])
 
   const myTeacherReviewForInput = useMemo(() => {
-    if (!teacherReviews || !me?.id) return null
+    if (!filteredTeacherReviews.length || !me?.id) return null
     const normalized = normalizeTeacherName(teacherName)
     if (!normalized) return null
     return (
-      teacherReviews.find(
+      filteredTeacherReviews.find(
         (review) =>
           review.studentId === me.id &&
           normalizeTeacherName(review.teacherName) === normalized
       ) ?? null
     )
-  }, [teacherReviews, me?.id, teacherName])
+  }, [filteredTeacherReviews, me?.id, teacherName])
 
   const handleTeacherSubmit = (event: React.FormEvent) => {
     event.preventDefault()
@@ -453,6 +496,13 @@ const CourseReviewsPage = () => {
     const name = teacherName.trim()
     if (!name) {
       setTeacherFeedback({ type: 'error', message: 'Please enter a teacher name.' })
+      return
+    }
+    if (myTeacherReviewForInput?.status === 'REMOVED') {
+      setTeacherFeedback({
+        type: 'error',
+        message: 'This review was removed and cannot be edited.',
+      })
       return
     }
     if (myTeacherReviewForInput) {
@@ -484,13 +534,17 @@ const CourseReviewsPage = () => {
     setUpvotedIds(new Set())
   }, [selectedTeacherName, myTeacherReviewForSelected])
 
+  useEffect(() => {
+    if (!groupByTeacher) return
+    if (teacherGroups.length === 0) return
+    if (openGroups.size > 0) return
+    setOpenGroups(new Set([teacherGroups[0].normalized]))
+  }, [groupByTeacher, teacherGroups, openGroups.size])
+
   const selectedReviews = useMemo(() => {
     if (!selectedGroup) return []
-    return [...selectedGroup.reviews].sort(
-      (a, b) =>
-        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    )
-  }, [selectedGroup])
+    return sortReviews([...selectedGroup.reviews])
+  }, [selectedGroup, teacherSort])
 
   const handleTabChange = (tab: 'course' | 'teacher') => {
     setActiveTab(tab)
@@ -787,10 +841,19 @@ const CourseReviewsPage = () => {
                     placeholder="Share your experience"
                   />
                 </label>
+                {myTeacherReviewForInput?.status === 'REMOVED' ? (
+                  <p className="text-xs text-amber-600">
+                    This review was removed and can’t be edited.
+                  </p>
+                ) : null}
                 <div className="flex gap-2">
                   <Button
                     type="submit"
-                    disabled={createTeacherMutation.isPending || updateTeacherMutation.isPending}
+                    disabled={
+                      createTeacherMutation.isPending ||
+                      updateTeacherMutation.isPending ||
+                      myTeacherReviewForInput?.status === 'REMOVED'
+                    }
                   >
                     {myTeacherReviewForInput ? 'Update Review' : 'Submit Review'}
                   </Button>
@@ -834,141 +897,290 @@ const CourseReviewsPage = () => {
               </Button>
             </div>
           ) : teacherGroups.length > 0 ? (
-            <div className="grid gap-6 lg:grid-cols-[260px,1fr]">
-              <Card className="space-y-3">
-                <div className="space-y-1">
-                  <h3 className="text-sm font-semibold text-gray-900">Teachers</h3>
-                  <p className="text-xs text-gray-600">
-                    Select a teacher to view reviews.
-                  </p>
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <label className="text-xs font-semibold uppercase text-gray-500" htmlFor="teacher-sort">
+                    Sort
+                  </label>
+                  <select
+                    id="teacher-sort"
+                    className="rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900"
+                    value={teacherSort}
+                    onChange={(event) =>
+                      setTeacherSort(
+                        event.target.value as 'newest' | 'oldest' | 'highest' | 'lowest'
+                      )
+                    }
+                  >
+                    <option value="newest">Newest</option>
+                    <option value="oldest">Oldest</option>
+                    <option value="highest">Highest rating</option>
+                    <option value="lowest">Lowest rating</option>
+                  </select>
                 </div>
-                <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
+                <Button
+                  variant="secondary"
+                  onClick={() => setGroupByTeacher((prev) => !prev)}
+                >
+                  Group by teacher: {groupByTeacher ? 'On' : 'Off'}
+                </Button>
+              </div>
+
+              {groupByTeacher ? (
+                <div className="space-y-3">
                   {teacherGroups.map((group) => {
-                    const isSelected = selectedGroup?.normalized === group.normalized
+                    const isOpen = openGroups.has(group.normalized)
+                    const reviews = sortReviews([...group.reviews])
                     return (
-                      <button
-                        key={group.normalized}
-                        type="button"
-                        className={`w-full rounded-lg border px-3 py-2 text-left text-sm transition ${
-                          isSelected
-                            ? 'border-ink bg-ink/5 text-gray-900'
-                            : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-                        }`}
-                        onClick={() => handleTeacherSelect(group.teacherName)}
-                      >
-                        <div className="flex items-center justify-between gap-2">
-                          <span className="font-semibold">{group.teacherName}</span>
-                          <span className="text-xs text-gray-500">
-                            {group.average.toFixed(1)}
-                          </span>
-                        </div>
-                        <div className="mt-1 text-xs text-gray-500">
-                          {group.reviews.length} reviews
-                        </div>
-                      </button>
+                      <Card key={group.normalized} className="space-y-3">
+                        <button
+                          type="button"
+                          className="flex w-full items-center justify-between text-left"
+                          onClick={() =>
+                            setOpenGroups((prev) => {
+                              const next = new Set(prev)
+                              if (next.has(group.normalized)) {
+                                next.delete(group.normalized)
+                              } else {
+                                next.add(group.normalized)
+                              }
+                              return next
+                            })
+                          }
+                        >
+                          <div>
+                            <p className="text-sm font-semibold text-gray-900">
+                              {group.teacherName}
+                            </p>
+                            <p className="text-xs text-gray-500">
+                              {group.reviews.length} reviews
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-3 text-right">
+                            <div>
+                              <p className="text-sm font-semibold text-gray-900">
+                                {group.average.toFixed(1)}
+                              </p>
+                              <StarRating value={group.average} readOnly size="sm" />
+                            </div>
+                            <span className="text-xs text-gray-500">
+                              {isOpen ? '▲' : '▼'}
+                            </span>
+                          </div>
+                        </button>
+                        {isOpen ? (
+                          <div className="space-y-3">
+                            {reviews.map((review) => {
+                              const isUnderReview =
+                                review.status === 'UNDER_REVIEW' &&
+                                review.studentId === me?.id
+                              const isUpvotePending = teacherPendingId === review.id
+                              const isUpvoted = upvotedIds.has(review.id)
+                              const isVisible = review.status === 'VISIBLE'
+                              return (
+                                <div
+                                  key={review.id}
+                                  className="rounded-lg border border-gray-100 bg-gray-50 p-4"
+                                >
+                                  <div className="flex flex-wrap items-center justify-between gap-3">
+                                    <div className="flex items-center gap-3">
+                                      <StarRating value={review.rating} readOnly size="sm" />
+                                      <span className="text-sm font-semibold text-gray-900">
+                                        {review.rating}/5
+                                      </span>
+                                      {review.status ? (
+                                        <Badge
+                                          label={review.status}
+                                          variant={statusVariant(review.status)}
+                                        />
+                                      ) : null}
+                                    </div>
+                                    <span className="text-xs text-gray-500">
+                                      {formatDate(review.createdAt)}
+                                    </span>
+                                  </div>
+                                  <p className="mt-2 text-sm text-gray-700">{review.text}</p>
+                                  <div className="mt-3 flex flex-wrap items-center gap-2">
+                                    <Button
+                                      variant="secondary"
+                                      onClick={() =>
+                                        isUpvoted
+                                          ? removeUpvoteTeacherMutation.mutate(review.id)
+                                          : upvoteTeacherMutation.mutate(review.id)
+                                      }
+                                      disabled={!isVisible || isUnderReview || isUpvotePending}
+                                    >
+                                      {isUpvotePending
+                                        ? 'Working...'
+                                        : isUpvoted
+                                          ? 'Remove Upvote'
+                                          : 'Upvote'}
+                                    </Button>
+                                    <Button
+                                      variant="secondary"
+                                      onClick={() => setTeacherReportTarget(review)}
+                                      disabled={!isVisible || isUnderReview}
+                                    >
+                                      Report
+                                    </Button>
+                                    {review.studentId === me?.id ? (
+                                      <Button
+                                        variant="danger"
+                                        onClick={() => setTeacherDeleteTarget(review)}
+                                      >
+                                        Delete
+                                      </Button>
+                                    ) : null}
+                                  </div>
+                                </div>
+                              )
+                            })}
+                          </div>
+                        ) : null}
+                      </Card>
                     )
                   })}
                 </div>
-              </Card>
-
-              <div className="space-y-4">
-                {selectedGroup ? (
-                  <Card className="space-y-4">
-                    <div className="flex flex-wrap items-start justify-between gap-4">
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          {selectedGroup.teacherName}
-                        </h3>
-                        <p className="text-sm text-gray-600">
-                          {selectedGroup.reviews.length} reviews
-                        </p>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-3xl font-semibold text-gray-900">
-                          {selectedGroup.average.toFixed(1)}
-                        </p>
-                        <StarRating value={selectedGroup.average} readOnly size="sm" />
-                      </div>
+              ) : (
+                <div className="grid gap-6 lg:grid-cols-[260px,1fr]">
+                  <Card className="space-y-3">
+                    <div className="space-y-1">
+                      <h3 className="text-sm font-semibold text-gray-900">Teachers</h3>
+                      <p className="text-xs text-gray-600">
+                        Select a teacher to view reviews.
+                      </p>
+                    </div>
+                    <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
+                      {teacherGroups.map((group) => {
+                        const isSelected = selectedGroup?.normalized === group.normalized
+                        return (
+                          <button
+                            key={group.normalized}
+                            type="button"
+                            className={`w-full rounded-lg border px-3 py-2 text-left text-sm transition ${
+                              isSelected
+                                ? 'border-ink bg-ink/5 text-gray-900'
+                                : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
+                            }`}
+                            onClick={() => handleTeacherSelect(group.teacherName)}
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="font-semibold">{group.teacherName}</span>
+                              <span className="text-xs text-gray-500">
+                                {group.average.toFixed(1)}
+                              </span>
+                            </div>
+                            <div className="mt-1 text-xs text-gray-500">
+                              {group.reviews.length} reviews
+                            </div>
+                          </button>
+                        )
+                      })}
                     </div>
                   </Card>
-                ) : null}
 
-                {selectedReviews.length > 0 ? (
-                  <div className="space-y-3">
-                    {selectedReviews.map((review) => {
-                      const isUnderReview =
-                        review.status === 'UNDER_REVIEW' && review.studentId === me?.id
-                      const isUpvotePending = teacherPendingId === review.id
-                      const isUpvoted = upvotedIds.has(review.id)
+                  <div className="space-y-4">
+                    {selectedGroup ? (
+                      <Card className="space-y-4">
+                        <div className="flex flex-wrap items-start justify-between gap-4">
+                          <div>
+                            <h3 className="text-lg font-semibold text-gray-900">
+                              {selectedGroup.teacherName}
+                            </h3>
+                            <p className="text-sm text-gray-600">
+                              {selectedGroup.reviews.length} reviews
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-3xl font-semibold text-gray-900">
+                              {selectedGroup.average.toFixed(1)}
+                            </p>
+                            <StarRating value={selectedGroup.average} readOnly size="sm" />
+                          </div>
+                        </div>
+                      </Card>
+                    ) : null}
 
-                      return (
-                        <Card key={review.id} className="space-y-3">
-                          <div className="flex flex-wrap items-center justify-between gap-3">
-                            <div className="flex items-center gap-3">
-                              <StarRating value={review.rating} readOnly size="sm" />
-                              <span className="text-sm font-semibold text-gray-900">
-                                {review.rating}/5
-                              </span>
-                              {review.status ? (
-                                <Badge
-                                  label={review.status}
-                                  variant={statusVariant(review.status)}
-                                />
-                              ) : null}
-                            </div>
-                            <span className="text-xs text-gray-500">
-                              {formatDate(review.createdAt)}
-                            </span>
-                          </div>
-                          <p className="text-sm text-gray-700">{review.text}</p>
-                          <div className="flex flex-wrap items-center gap-2">
-                            <Button
-                              variant="secondary"
-                              onClick={() =>
-                                isUpvoted
-                                  ? removeUpvoteTeacherMutation.mutate(review.id)
-                                  : upvoteTeacherMutation.mutate(review.id)
-                              }
-                              disabled={isUnderReview || isUpvotePending}
-                            >
-                              {isUpvotePending
-                                ? 'Working...'
-                                : isUpvoted
-                                  ? 'Remove Upvote'
-                                  : 'Upvote'}
-                            </Button>
-                            <Button
-                              variant="secondary"
-                              onClick={() => setTeacherReportTarget(review)}
-                              disabled={isUnderReview}
-                            >
-                              Report
-                            </Button>
-                            {review.studentId === me?.id ? (
-                              <Button
-                                variant="danger"
-                                onClick={() => setTeacherDeleteTarget(review)}
-                              >
-                                Delete
-                              </Button>
-                            ) : null}
-                            {isUnderReview ? (
-                              <span className="text-xs text-amber-600">
-                                Under review
-                              </span>
-                            ) : null}
-                          </div>
-                        </Card>
-                      )
-                    })}
+                    {selectedReviews.length > 0 ? (
+                      <div className="space-y-3">
+                        {selectedReviews.map((review) => {
+                          const isUnderReview =
+                            review.status === 'UNDER_REVIEW' && review.studentId === me?.id
+                          const isUpvotePending = teacherPendingId === review.id
+                          const isUpvoted = upvotedIds.has(review.id)
+                          const isVisible = review.status === 'VISIBLE'
+
+                          return (
+                            <Card key={review.id} className="space-y-3">
+                              <div className="flex flex-wrap items-center justify-between gap-3">
+                                <div className="flex items-center gap-3">
+                                  <StarRating value={review.rating} readOnly size="sm" />
+                                  <span className="text-sm font-semibold text-gray-900">
+                                    {review.rating}/5
+                                  </span>
+                                  {review.status ? (
+                                    <Badge
+                                      label={review.status}
+                                      variant={statusVariant(review.status)}
+                                    />
+                                  ) : null}
+                                </div>
+                                <span className="text-xs text-gray-500">
+                                  {formatDate(review.createdAt)}
+                                </span>
+                              </div>
+                              <p className="text-sm text-gray-700">{review.text}</p>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <Button
+                                  variant="secondary"
+                                  onClick={() =>
+                                    isUpvoted
+                                      ? removeUpvoteTeacherMutation.mutate(review.id)
+                                      : upvoteTeacherMutation.mutate(review.id)
+                                  }
+                                  disabled={!isVisible || isUnderReview || isUpvotePending}
+                                >
+                                  {isUpvotePending
+                                    ? 'Working...'
+                                    : isUpvoted
+                                      ? 'Remove Upvote'
+                                      : 'Upvote'}
+                                </Button>
+                                <Button
+                                  variant="secondary"
+                                  onClick={() => setTeacherReportTarget(review)}
+                                  disabled={!isVisible || isUnderReview}
+                                >
+                                  Report
+                                </Button>
+                                {review.studentId === me?.id ? (
+                                  <Button
+                                    variant="danger"
+                                    onClick={() => setTeacherDeleteTarget(review)}
+                                  >
+                                    Delete
+                                  </Button>
+                                ) : null}
+                                {isUnderReview ? (
+                                  <span className="text-xs text-amber-600">
+                                    Under review
+                                  </span>
+                                ) : null}
+                              </div>
+                            </Card>
+                          )
+                        })}
+                      </div>
+                    ) : (
+                      <EmptyState
+                        title="No teacher reviews yet"
+                        description="No reviews yet - be the first."
+                      />
+                    )}
                   </div>
-                ) : (
-                  <EmptyState
-                    title="No teacher reviews yet"
-                    description="No reviews yet - be the first."
-                  />
-                )}
-              </div>
+                </div>
+              )}
             </div>
           ) : (
             <EmptyState

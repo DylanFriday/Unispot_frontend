@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { teacherReviewsApi } from '../../api/teacherReviews.api'
+import { teacherReviewModerationApi } from '../../api/teacherReviewModeration.api'
 import type { ApiError } from '../../types/dto'
 import PageHeader from '../../components/PageHeader'
 import Table from '../../components/Table'
@@ -10,7 +10,6 @@ import Alert from '../../components/Alert'
 import Spinner from '../../components/Spinner'
 import EmptyState from '../../components/EmptyState'
 import Modal from '../../components/Modal'
-import Input from '../../components/Input'
 import { formatDate } from '../../utils/format'
 
 const statusOptions = ['UNDER_REVIEW', 'VISIBLE', 'REMOVED'] as const
@@ -37,8 +36,6 @@ const TeacherReviewModerationPage = () => {
   const queryClient = useQueryClient()
   const [status, setStatus] = useState<typeof statusOptions[number]>('UNDER_REVIEW')
   const [textModal, setTextModal] = useState<string | null>(null)
-  const [removeTargetId, setRemoveTargetId] = useState<number | null>(null)
-  const [removeReason, setRemoveReason] = useState('')
   const truncateText = (text: string, maxLength = 90) =>
     text.length > maxLength ? `${text.slice(0, maxLength)}...` : text
 
@@ -46,22 +43,19 @@ const TeacherReviewModerationPage = () => {
 
   const { data, isLoading, error } = useQuery({
     queryKey,
-    queryFn: () => teacherReviewsApi.listModeration(status),
+    queryFn: () => teacherReviewModerationApi.list(status),
   })
 
   const approveMutation = useMutation({
-    mutationFn: (id: number) => teacherReviewsApi.approve(id),
+    mutationFn: (id: number) => teacherReviewModerationApi.approve(id),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey })
     },
   })
 
   const removeMutation = useMutation({
-    mutationFn: (payload: { id: number; reason?: string }) =>
-      teacherReviewsApi.remove(payload.id, payload.reason),
+    mutationFn: (id: number) => teacherReviewModerationApi.remove(id),
     onSuccess: () => {
-      setRemoveTargetId(null)
-      setRemoveReason('')
       void queryClient.invalidateQueries({ queryKey })
     },
   })
@@ -139,7 +133,7 @@ const TeacherReviewModerationPage = () => {
                   {review.status !== 'REMOVED' ? (
                     <Button
                       variant="danger"
-                      onClick={() => setRemoveTargetId(review.id)}
+                      onClick={() => removeMutation.mutate(review.id)}
                       disabled={removeMutation.isPending}
                     >
                       {removeMutation.isPending ? 'Removing...' : 'Remove'}
@@ -170,52 +164,6 @@ const TeacherReviewModerationPage = () => {
         <p className="text-sm text-gray-700">{textModal}</p>
       </Modal>
 
-      <Modal
-        open={removeTargetId !== null}
-        title="Remove review"
-        onClose={() => {
-          setRemoveTargetId(null)
-          setRemoveReason('')
-        }}
-        footer={
-          <div className="flex gap-2">
-            <Button
-              variant="secondary"
-              onClick={() => {
-                setRemoveTargetId(null)
-                setRemoveReason('')
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              variant="danger"
-              onClick={() =>
-                removeTargetId !== null &&
-                removeMutation.mutate({
-                  id: removeTargetId,
-                  reason: removeReason.trim() || undefined,
-                })
-              }
-              disabled={removeMutation.isPending}
-            >
-              {removeMutation.isPending ? 'Removing...' : 'Remove'}
-            </Button>
-          </div>
-        }
-      >
-        <div className="space-y-3">
-          <p className="text-sm text-gray-600">
-            Optionally provide a reason for removing this review.
-          </p>
-          <Input
-            label="Reason"
-            value={removeReason}
-            onChange={(event) => setRemoveReason(event.target.value)}
-            placeholder="Optional reason"
-          />
-        </div>
-      </Modal>
     </div>
   )
 }

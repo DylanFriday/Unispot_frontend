@@ -103,9 +103,6 @@ const Navbar = () => {
                     <Link to="/moderation/teacher-reviews" className={`block rounded px-2 py-1 ${linkClass('/moderation/teacher-reviews')}`}>
                       Teacher Review Moderation
                     </Link>
-                    <Link to="/moderation/teacher-suggestions" className={`block rounded px-2 py-1 ${linkClass('/moderation/teacher-suggestions')}`}>
-                      Teacher Suggestions
-                    </Link>
                     <Link to="/moderation/lease-listings" className={`block rounded px-2 py-1 ${linkClass('/moderation/lease-listings')}`}>
                       Lease Moderation
                     </Link>

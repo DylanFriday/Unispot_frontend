@@ -35,7 +35,6 @@ const Sidebar = () => {
       { to: '/moderation/study-sheets', label: 'Study Sheets' },
       { to: '/moderation/reviews', label: 'Review Moderation' },
       { to: '/moderation/teacher-reviews', label: 'Teacher Reviews' },
-      { to: '/moderation/teacher-suggestions', label: 'Teacher Suggestions' },
       { to: '/moderation/lease-listings', label: 'Lease Listings' },
     ],
     []
