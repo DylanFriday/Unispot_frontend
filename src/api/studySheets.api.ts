@@ -3,6 +3,7 @@ import type {
   StudySheetCreateRequest,
   StudySheetDto,
   StudySheetPurchaseResponse,
+  StudySheetPurchaseResponseRaw,
   StudySheetUpdateRequest,
 } from '../types/dto'
 
@@ -30,9 +31,14 @@ export const studySheetsApi = {
     return response.data
   },
   purchase: async (id: number) => {
-    const response = await http.post<StudySheetPurchaseResponse>(
+    const response = await http.post<StudySheetPurchaseResponseRaw>(
       `/study-sheets/${id}/purchase`
     )
-    return response.data
+    const payload = response.data
+    return {
+      paymentId: payload.id,
+      referenceCode: payload.reference_code,
+      amountCents: payload.amount,
+    } satisfies StudySheetPurchaseResponse
   },
 }

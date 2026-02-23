@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { leaseListingsApi } from '../api/leaseListings.api'
 import type { ApiError, LeaseListingDto } from '../types/dto'
-import { useAuth } from '../auth/useAuth'
 import PageHeader from '../components/PageHeader'
 import Card from '../components/Card'
 import Button from '../components/Button'
@@ -13,6 +12,7 @@ import Alert from '../components/Alert'
 import Spinner from '../components/Spinner'
 import EmptyState from '../components/EmptyState'
 import { formatBahtFromCents } from '../utils/money'
+import { formatDate } from '../utils/format'
 
 const statusVariant = (status: string) => {
   if (status === 'APPROVED') return 'success'
@@ -24,7 +24,6 @@ const statusVariant = (status: string) => {
   const formatCents = (value: number) => formatBahtFromCents(value)
 
 const StudentLeaseListingsMinePage = () => {
-  const { me } = useAuth()
   const queryClient = useQueryClient()
   const [selected, setSelected] = useState<LeaseListingDto | null>(null)
 
@@ -41,26 +40,14 @@ const StudentLeaseListingsMinePage = () => {
     },
   })
 
-  const transferMutation = useMutation({
-    mutationFn: (id: number) => leaseListingsApi.transfer(id),
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ['lease-listings', 'mine'] })
-    },
-  })
-
   const errorMessage = (error as { response?: { data?: ApiError } })?.response
     ?.data?.message
-
-  const canTransfer = (listing: LeaseListingDto) => {
-    if (!me) return false
-    return (me.role === 'ADMIN' || me.id === listing.ownerId) && listing.status === 'APPROVED'
-  }
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="My Lease Listings"
-        subtitle="Manage your lease listings and transfer status."
+        subtitle="Manage your lease listings."
         action={
           <Link to="/student/lease-listings/new">
             <Button>Create new</Button>
@@ -92,10 +79,11 @@ const StudentLeaseListingsMinePage = () => {
               </div>
               <div className="text-sm text-gray-600">
                 <p>Location: {listing.location}</p>
+                <p>Contact (LINE): {listing.lineId?.trim() ? listing.lineId : 'Not provided'}</p>
                 <p>Rent: {formatCents(listing.rentCents)}</p>
                 <p>Deposit: {formatCents(listing.depositCents)}</p>
                 <p>
-                  Dates: {listing.startDate} → {listing.endDate}
+                  Dates: {formatDate(listing.startDate, { dateStyle: 'medium' })} → {formatDate(listing.endDate, { dateStyle: 'medium' })}
                 </p>
               </div>
               <div className="flex flex-wrap gap-2">
@@ -105,14 +93,6 @@ const StudentLeaseListingsMinePage = () => {
                     onClick={() => setSelected(listing)}
                   >
                     Delete
-                  </Button>
-                ) : null}
-                {canTransfer(listing) ? (
-                  <Button
-                    onClick={() => transferMutation.mutate(listing.id)}
-                    disabled={transferMutation.isPending}
-                  >
-                    {transferMutation.isPending ? 'Transferring...' : 'Transfer'}
                   </Button>
                 ) : null}
               </div>

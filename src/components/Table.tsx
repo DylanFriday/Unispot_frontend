@@ -6,9 +6,9 @@ interface TableProps {
 }
 
 const Table = ({ headers, children }: TableProps) => (
-  <div className="w-full overflow-x-auto rounded-xl border border-gray-200 bg-white">
+  <div className="glass-panel-strong w-full overflow-x-auto rounded-2xl">
     <table className="w-full text-left text-sm">
-      <thead className="bg-gray-50 text-xs uppercase text-gray-500">
+      <thead className="bg-white/45 text-xs uppercase text-slate-600">
         <tr>
           {headers.map((header) => (
             <th key={header} className="px-4 py-3 font-semibold">
@@ -17,7 +17,7 @@ const Table = ({ headers, children }: TableProps) => (
           ))}
         </tr>
       </thead>
-      <tbody className="divide-y divide-gray-100">{children}</tbody>
+      <tbody className="divide-y divide-white/45">{children}</tbody>
     </table>
   </div>
 )

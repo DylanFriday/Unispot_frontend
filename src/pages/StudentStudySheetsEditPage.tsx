@@ -5,7 +5,7 @@ import { useForm } from 'react-hook-form'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { studySheetsApi } from '../api/studySheets.api'
-import type { ApiError, StudySheetDto } from '../types/dto'
+import type { ApiError, StudySheetUpdateRequest } from '../types/dto'
 import PageHeader from '../components/PageHeader'
 import Card from '../components/Card'
 import Input from '../components/Input'
@@ -62,7 +62,7 @@ const StudentStudySheetsEditPage = () => {
   }, [reset, sheet])
 
   const mutation = useMutation({
-    mutationFn: (payload: Partial<StudySheetDto>) =>
+    mutationFn: (payload: StudySheetUpdateRequest) =>
       studySheetsApi.update(sheetId, payload),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ['study-sheets', 'mine'] })

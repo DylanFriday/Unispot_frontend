@@ -11,12 +11,14 @@ const Button = ({
   ...props
 }: ButtonProps) => {
   const base =
-    'inline-flex items-center justify-center rounded-md px-4 py-2 text-sm font-semibold transition focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:opacity-60 disabled:cursor-not-allowed'
+    'inline-flex items-center justify-center rounded-lg px-4 py-2 text-sm font-semibold transition duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-60'
   const styles: Record<NonNullable<ButtonProps['variant']>, string> = {
-    primary: 'bg-ink text-white hover:bg-black focus-visible:ring-black',
+    primary:
+      'border border-white/55 bg-gradient-to-br from-indigo-500 to-blue-500 text-white shadow-[0_12px_28px_-18px_rgba(79,93,255,0.9)] hover:brightness-105 focus-visible:ring-indigo-500 focus-visible:ring-offset-indigo-50',
     secondary:
-      'bg-gray-200 text-gray-900 hover:bg-gray-300 focus-visible:ring-gray-400',
-    danger: 'bg-red-600 text-white hover:bg-red-700 focus-visible:ring-red-500',
+      'border border-white/55 bg-white/50 text-slate-900 backdrop-blur-lg hover:bg-white/70 focus-visible:ring-indigo-200 focus-visible:ring-offset-indigo-50',
+    danger:
+      'border border-indigo-200/70 bg-indigo-100/65 text-indigo-900 backdrop-blur-lg hover:bg-indigo-100/85 focus-visible:ring-indigo-200 focus-visible:ring-offset-indigo-50',
   }
 
   return (

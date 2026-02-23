@@ -15,6 +15,7 @@ import Alert from '../../components/Alert'
 import Spinner from '../../components/Spinner'
 import EmptyState from '../../components/EmptyState'
 import { formatBahtFromCents, toCents } from '../../utils/money'
+import { formatDate } from '../../utils/format'
 
 const statusVariant = (status: string) => {
   if (status === 'APPROVED') return 'success'
@@ -27,6 +28,7 @@ const schema = z.object({
   title: z.string().min(3, 'Title is required'),
   description: z.string().min(5, 'Description is required'),
   location: z.string().min(3, 'Location is required'),
+  lineId: z.string().optional(),
   rentCents: z.string().min(1, 'Rent is required'),
   depositCents: z.string().min(1, 'Deposit is required'),
   startDate: z.string().min(1, 'Start date is required'),
@@ -57,13 +59,11 @@ const MyLeaseListingsPage = () => {
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [editingListing, setEditingListing] = useState<LeaseListingDto | null>(null)
   const [deleteTarget, setDeleteTarget] = useState<LeaseListingDto | null>(null)
-  const [transferTarget, setTransferTarget] = useState<LeaseListingDto | null>(null)
   const [feedback, setFeedback] = useState<{
     type: 'success' | 'error'
     message: string
   } | null>(null)
   const [pendingDeleteId, setPendingDeleteId] = useState<number | null>(null)
-  const [pendingTransferId, setPendingTransferId] = useState<number | null>(null)
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['leases', 'mine'],
@@ -83,6 +83,7 @@ const MyLeaseListingsPage = () => {
       title: '',
       description: '',
       location: '',
+      lineId: '',
       rentCents: '',
       depositCents: '',
       startDate: '',
@@ -97,6 +98,7 @@ const MyLeaseListingsPage = () => {
       title: listing.title,
       description: listing.description,
       location: listing.location,
+      lineId: listing.lineId ?? '',
       rentCents: formatBahtFromCents(listing.rentCents),
       depositCents: formatBahtFromCents(listing.depositCents),
       startDate: listing.startDate.slice(0, 10),
@@ -110,6 +112,7 @@ const MyLeaseListingsPage = () => {
       title: string
       description: string
       location: string
+      lineId?: string | null
       rentCents: number
       depositCents: number
       startDate: string
@@ -150,30 +153,13 @@ const MyLeaseListingsPage = () => {
     },
   })
 
-  const transferMutation = useMutation({
-    mutationFn: (id: number) => leasesApi.transferLease(id),
-    onMutate: (id) => {
-      setPendingTransferId(id)
-    },
-    onSuccess: () => {
-      setTransferTarget(null)
-      setPendingTransferId(null)
-      setFeedback({ type: 'success', message: 'Lease transferred' })
-      void queryClient.invalidateQueries({ queryKey: ['leases', 'mine'] })
-    },
-    onError: (err) => {
-      setPendingTransferId(null)
-      const message = (err as { response?: { data?: ApiError } })?.response
-        ?.data?.message
-      setFeedback({ type: 'error', message: message ?? 'Transfer failed' })
-    },
-  })
-
   const onSubmit = (values: FormValues) => {
+    const trimmedLineId = values.lineId?.trim() ?? ''
     const payload = {
       title: values.title,
       description: values.description,
       location: values.location,
+      lineId: trimmedLineId || null,
       rentCents: toCents(values.rentCents),
       depositCents: toCents(values.depositCents),
       startDate: toIso(values.startDate),
@@ -229,12 +215,16 @@ const MyLeaseListingsPage = () => {
               <td className="px-4 py-3">
                 {formatBahtFromCents(listing.depositCents)}
               </td>
-              <td className="px-4 py-3">{listing.startDate}</td>
-              <td className="px-4 py-3">{listing.endDate}</td>
+              <td className="px-4 py-3">
+                {formatDate(listing.startDate, { dateStyle: 'medium' })}
+              </td>
+              <td className="px-4 py-3">
+                {formatDate(listing.endDate, { dateStyle: 'medium' })}
+              </td>
               <td className="px-4 py-3">
                 <Badge label={listing.status} variant={statusVariant(listing.status)} />
               </td>
-              <td className="px-4 py-3">{listing.createdAt}</td>
+              <td className="px-4 py-3">{formatDate(listing.createdAt)}</td>
               <td className="px-4 py-3">
                 <div className="flex flex-wrap gap-2">
                   <Button
@@ -251,11 +241,6 @@ const MyLeaseListingsPage = () => {
                   >
                     Delete
                   </Button>
-                  {listing.status === 'APPROVED' ? (
-                    <Button onClick={() => setTransferTarget(listing)}>
-                      Transfer
-                    </Button>
-                  ) : null}
                 </div>
               </td>
             </tr>
@@ -315,6 +300,17 @@ const MyLeaseListingsPage = () => {
             error={errors.location?.message}
             {...register('location')}
           />
+          <div className="space-y-1">
+            <Input
+              label="LINE ID (for contact)"
+              placeholder="yourlineid123"
+              error={errors.lineId?.message}
+              {...register('lineId')}
+            />
+            <p className="text-xs text-slate-500">
+              Buyers can contact you via LINE.
+            </p>
+          </div>
           <div className="grid gap-4 md:grid-cols-2">
             <Input
               label="Rent (Baht)"
@@ -372,32 +368,6 @@ const MyLeaseListingsPage = () => {
         Are you sure you want to delete this lease listing?
       </Modal>
 
-      <Modal
-        open={Boolean(transferTarget)}
-        title="Transfer Lease?"
-        onClose={() => setTransferTarget(null)}
-        footer={
-          <div className="flex gap-2">
-            <Button variant="secondary" onClick={() => setTransferTarget(null)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={() => transferTarget && transferMutation.mutate(transferTarget.id)}
-              disabled={
-                transferMutation.isPending &&
-                pendingTransferId === transferTarget?.id
-              }
-            >
-              {transferMutation.isPending &&
-              pendingTransferId === transferTarget?.id
-                ? 'Transferring...'
-                : 'Transfer'}
-            </Button>
-          </div>
-        }
-      >
-        This will mark the listing as TRANSFERRED and remove it from the marketplace.
-      </Modal>
     </div>
   )
 }

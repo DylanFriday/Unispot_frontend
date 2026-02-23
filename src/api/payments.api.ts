@@ -1,5 +1,5 @@
 import http from './http'
-import type { AdminPaymentDto, PaymentStatus } from '../types/dto'
+import type { AdminPaymentDto, PaymentDto, PaymentStatus } from '../types/dto'
 
 export const paymentsApi = {
   listPayments: async (status: PaymentStatus) => {
@@ -18,6 +18,10 @@ export const paymentsApi = {
     const response = await http.post<AdminPaymentDto | void>(
       `/admin/payments/${id}/release`
     )
+    return response.data
+  },
+  listMine: async () => {
+    const response = await http.get<PaymentDto[]>('/payments/mine')
     return response.data
   },
 }

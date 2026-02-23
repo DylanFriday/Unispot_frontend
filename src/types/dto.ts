@@ -3,6 +3,13 @@ export type Role = 'STUDENT' | 'STAFF' | 'ADMIN'
 export interface MeResponse {
   id: number
   role: Role
+  name?: string
+  username?: string
+  fullName?: string
+  email?: string
+  phone?: string
+  bio?: string
+  avatarUrl?: string
 }
 
 export interface AuthTokenResponse {
@@ -18,6 +25,20 @@ export interface RegisterRequest {
 export interface LoginRequest {
   email: string
   password: string
+}
+
+export interface ProfileUpdateRequest {
+  name?: string
+  username?: string
+  fullName?: string
+  phone?: string
+  bio?: string
+  avatarUrl?: string
+}
+
+export interface ChangePasswordRequest {
+  currentPassword: string
+  newPassword: string
 }
 
 export interface ApiError {
@@ -69,6 +90,7 @@ export interface LeaseListingDto {
   title: string
   description: string
   location: string
+  lineId?: string | null
   rentCents: number
   depositCents: number
   startDate: string
@@ -90,7 +112,31 @@ export interface StudySheetPurchaseResponse {
   paymentId: number
   referenceCode: string
   amountCents: number
-  promptpayPayload: string
+}
+
+export interface StudySheetPurchaseResponseRaw {
+  id: number
+  reference_code: string
+  amount: number
+}
+
+export interface PurchasedStudySheetDto {
+  purchaseId: number
+  purchasedAt: string
+  amountCents: number
+  studySheet: {
+    id: number
+    title: string
+    description?: string | null
+    fileUrl: string
+    priceCents: number
+    status: string
+    createdAt: string
+    updatedAt: string
+    ownerId: number
+    courseId: number
+    courseCode: string
+  }
 }
 
 export type ReviewStatus = 'VISIBLE' | 'UNDER_REVIEW' | 'REMOVED'
@@ -154,4 +200,49 @@ export interface AdminPaymentDto {
   sellerId: number
   studySheetId: number
   createdAt: string
+}
+
+export interface PaymentDto {
+  id: number
+  amount: number
+  status: PaymentStatus
+  createdAt: string
+  buyerId?: number
+  sellerId?: number
+  referenceCode?: string
+}
+
+export interface WalletSummaryDto {
+  walletBalance: number
+  totalEarned: number
+  pendingPayout: number
+}
+
+export interface StudentDashboardSummaryDto {
+  walletBalance: number
+  mySales: {
+    pendingPayoutCents: number
+    releasedPayoutCents: number
+    [key: string]: unknown
+  }
+  myPurchases: {
+    totalSpentCents: number
+    [key: string]: unknown
+  }
+  myLeases: Record<string, unknown>
+  myReviews: Record<string, unknown>
+  myStudySheets: Record<string, unknown>
+}
+
+export type WithdrawalStatus = 'PENDING' | 'APPROVED' | 'REJECTED'
+
+export interface WithdrawalDto {
+  id: number
+  sellerId: number
+  amount: number
+  status: WithdrawalStatus
+  reviewedById?: number
+  reviewedAt?: string
+  createdAt: string
+  updatedAt: string
 }

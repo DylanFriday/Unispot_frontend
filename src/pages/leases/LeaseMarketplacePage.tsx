@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { leasesApi } from '../../api/leases.api'
 import type { ApiError } from '../../types/dto'
 import { useAuth } from '../../auth/useAuth'
@@ -11,6 +11,7 @@ import Alert from '../../components/Alert'
 import Spinner from '../../components/Spinner'
 import EmptyState from '../../components/EmptyState'
 import { formatBahtFromCents } from '../../utils/money'
+import { formatDate } from '../../utils/format'
 
 const statusVariant = (status: string) => {
   if (status === 'APPROVED') return 'success'
@@ -21,9 +22,7 @@ const statusVariant = (status: string) => {
 
 const LeaseMarketplacePage = () => {
   const { me } = useAuth()
-  const queryClient = useQueryClient()
-  const [requestedIds, setRequestedIds] = useState<Set<number>>(new Set())
-  const [pendingId, setPendingId] = useState<number | null>(null)
+  const [copiedId, setCopiedId] = useState<number | null>(null)
   const [feedback, setFeedback] = useState<
     Record<number, { type: 'success' | 'error'; message: string }>
   >({})
@@ -33,52 +32,42 @@ const LeaseMarketplacePage = () => {
     queryFn: () => leasesApi.listApprovedLeases(),
   })
 
-  const interestMutation = useMutation({
-    mutationFn: (id: number) => leasesApi.expressInterest(id),
-    onMutate: (id) => {
-      setPendingId(id)
-    },
-    onSuccess: (_, id) => {
-      setRequestedIds((prev) => new Set(prev).add(id))
-      setPendingId(null)
-      setFeedback((prev) => ({
-        ...prev,
-        [id]: { type: 'success', message: 'Interest sent ✅' },
-      }))
-      void queryClient.invalidateQueries({ queryKey: ['leases', 'marketplace'] })
-    },
-    onError: (err, id) => {
-      setPendingId(null)
-      const status = (err as { response?: { status?: number } })?.response
-        ?.status
-      const message = (err as { response?: { data?: ApiError } })?.response
-        ?.data?.message
-      if (status === 409 || message?.toLowerCase().includes('already')) {
-        setFeedback((prev) => ({
-          ...prev,
-          [id]: { type: 'error', message: 'You already expressed interest.' },
-        }))
-        setRequestedIds((prev) => new Set(prev).add(id))
-        return
-      }
-      setFeedback((prev) => ({
-        ...prev,
-        [id]: {
-          type: 'error',
-          message: message ?? 'Failed to send interest request',
-        },
-      }))
-    },
-  })
-
   const errorMessage = (error as { response?: { data?: ApiError } })?.response
     ?.data?.message
+
+  const openLineContact = (lineId: string) => {
+    const encodedLineId = encodeURIComponent(lineId)
+    const deepLink = `line://ti/p/~${encodedLineId}`
+    const fallbackLink = `https://line.me/R/ti/p/~${encodedLineId}`
+
+    window.location.href = deepLink
+    window.setTimeout(() => {
+      window.location.href = fallbackLink
+    }, 700)
+  }
+
+  const copyLineId = async (listingId: number, lineId: string) => {
+    try {
+      await navigator.clipboard.writeText(lineId)
+      setCopiedId(listingId)
+      setFeedback((prev) => ({
+        ...prev,
+        [listingId]: { type: 'success', message: 'Copied!' },
+      }))
+      window.setTimeout(() => setCopiedId((prev) => (prev === listingId ? null : prev)), 1500)
+    } catch {
+      setFeedback((prev) => ({
+        ...prev,
+        [listingId]: { type: 'error', message: 'Failed to copy LINE ID.' },
+      }))
+    }
+  }
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Leases Marketplace"
-        subtitle="Browse approved lease listings." 
+        subtitle="Browse approved lease listings and contact owners via LINE." 
       />
 
       {isLoading ? (
@@ -103,12 +92,16 @@ const LeaseMarketplacePage = () => {
               <p className="text-sm text-gray-600">{listing.description}</p>
               <div className="text-sm text-gray-600">
                 <p>Location: {listing.location}</p>
+                <p>
+                  Contact (LINE):{' '}
+                  {listing.lineId?.trim() ? listing.lineId : 'Not provided'}
+                </p>
                 <p>Rent: {formatBahtFromCents(listing.rentCents)}</p>
                 <p>Deposit: {formatBahtFromCents(listing.depositCents)}</p>
                 <p>
-                  Dates: {listing.startDate} → {listing.endDate}
+                  Dates: {formatDate(listing.startDate, { dateStyle: 'medium' })} → {formatDate(listing.endDate, { dateStyle: 'medium' })}
                 </p>
-                <p>Created: {listing.createdAt}</p>
+                <p>Created: {formatDate(listing.createdAt)}</p>
               </div>
               {feedback[listing.id] ? (
                 <Alert
@@ -117,26 +110,36 @@ const LeaseMarketplacePage = () => {
                 />
               ) : null}
               {me?.role === 'STUDENT' ? (
-                listing.status === 'APPROVED' ? (
-                  <Button
-                    onClick={() => interestMutation.mutate(listing.id)}
-                    disabled={
-                      interestMutation.isPending && pendingId === listing.id
-                        ? true
-                        : requestedIds.has(listing.id)
-                    }
-                  >
-                    {requestedIds.has(listing.id)
-                      ? 'Requested'
-                      : interestMutation.isPending && pendingId === listing.id
-                        ? 'Sending...'
-                        : 'Express Interest'}
-                  </Button>
-                ) : (
-                  <p className="text-xs text-gray-500">
-                    Interest available only for approved listings.
-                  </p>
-                )
+                <div className="space-y-2">
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      onClick={() =>
+                        listing.lineId?.trim() && openLineContact(listing.lineId.trim())
+                      }
+                      disabled={!listing.lineId?.trim()}
+                    >
+                      Contact Owner
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() =>
+                        listing.lineId?.trim() &&
+                        copyLineId(listing.id, listing.lineId.trim())
+                      }
+                      disabled={!listing.lineId?.trim()}
+                    >
+                      Copy LINE ID
+                    </Button>
+                  </div>
+                  {!listing.lineId?.trim() ? (
+                    <p className="text-xs text-gray-500">
+                      Owner didn&apos;t provide LINE ID.
+                    </p>
+                  ) : null}
+                  {copiedId === listing.id ? (
+                    <p className="text-xs text-emerald-700">Copied!</p>
+                  ) : null}
+                </div>
               ) : null}
             </Card>
           ))}

@@ -12,6 +12,7 @@ import Alert from '../../components/Alert'
 import Spinner from '../../components/Spinner'
 import EmptyState from '../../components/EmptyState'
 import { formatBahtFromCents } from '../../utils/money'
+import { formatDate } from '../../utils/format'
 
 const statusOptions: LeaseListingStatus[] = [
   'PENDING',
@@ -122,13 +123,17 @@ const LeaseModerationPage = () => {
               <td className="px-4 py-3">
                 {formatBahtFromCents(listing.depositCents)}
               </td>
-              <td className="px-4 py-3">{listing.startDate}</td>
-              <td className="px-4 py-3">{listing.endDate}</td>
+              <td className="px-4 py-3">
+                {formatDate(listing.startDate, { dateStyle: 'medium' })}
+              </td>
+              <td className="px-4 py-3">
+                {formatDate(listing.endDate, { dateStyle: 'medium' })}
+              </td>
               <td className="px-4 py-3">
                 <Badge label={listing.status} variant={statusVariant(listing.status)} />
               </td>
               <td className="px-4 py-3">{listing.ownerId}</td>
-              <td className="px-4 py-3">{listing.createdAt}</td>
+              <td className="px-4 py-3">{formatDate(listing.createdAt)}</td>
               <td className="px-4 py-3">
                 {listing.status === 'PENDING' ? (
                   <div className="flex flex-wrap gap-2">

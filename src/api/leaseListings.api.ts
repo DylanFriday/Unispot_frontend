@@ -28,6 +28,7 @@ export const leaseListingsApi = {
     title: string
     description: string
     location: string
+    lineId?: string | null
     rentCents: number
     depositCents: number
     startDate: string

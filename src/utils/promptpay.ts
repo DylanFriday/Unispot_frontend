@@ -31,6 +31,9 @@ const crc16Ccitt = (payload: string) => {
 }
 
 export const buildPromptPayPayload = ({ phoneOrId, amountBaht }: PromptPayInput) => {
+  if (amountBaht == null || Number.isNaN(amountBaht)) {
+    throw new Error('PromptPay amount is required')
+  }
   const normalized = normalizePhoneOrId(phoneOrId)
   const amount = amountBaht.toFixed(2)
 

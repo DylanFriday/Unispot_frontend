@@ -14,6 +14,7 @@ export const leasesApi = {
     title: string
     description: string
     location: string
+    lineId?: string | null
     rentCents: number
     depositCents: number
     startDate: string
@@ -28,6 +29,7 @@ export const leasesApi = {
       title: string
       description: string
       location: string
+      lineId: string | null
       rentCents: number
       depositCents: number
       startDate: string

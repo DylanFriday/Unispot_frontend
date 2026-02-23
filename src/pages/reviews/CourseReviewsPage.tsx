@@ -75,7 +75,7 @@ const CourseReviewsPage = () => {
   } | null>(null)
   const [courseReportTarget, setCourseReportTarget] = useState<ReviewDto | null>(null)
   const [courseReportReason, setCourseReportReason] = useState('')
-  const [coursePendingId, setCoursePendingId] = useState<number | null>(null)
+  const [courseUpvotedIds, setCourseUpvotedIds] = useState<Set<number>>(new Set())
   const [courseSort, setCourseSort] = useState<'newest' | 'oldest' | 'highest' | 'lowest'>(
     'newest'
   )
@@ -145,29 +145,25 @@ const CourseReviewsPage = () => {
     },
   })
 
-  const upvoteCourseMutation = useMutation({
-    mutationFn: (id: number) => reviewsApi.upvote(id),
-    onMutate: (id) => setCoursePendingId(id),
-    onSuccess: () => {
-      setCoursePendingId(null)
-      void queryClient.invalidateQueries({
-        queryKey: ['courseReviews', courseId],
-      })
-    },
-    onError: () => setCoursePendingId(null),
-  })
+  const handleCourseUpvote = (reviewId: number) => {
+    if (!me) {
+      setCourseFeedback({ type: 'error', message: 'Login to upvote reviews.' })
+      return
+    }
+    setCourseUpvotedIds((prev) => new Set(prev).add(reviewId))
+  }
 
-  const removeUpvoteCourseMutation = useMutation({
-    mutationFn: (id: number) => reviewsApi.removeUpvote(id),
-    onMutate: (id) => setCoursePendingId(id),
-    onSuccess: () => {
-      setCoursePendingId(null)
-      void queryClient.invalidateQueries({
-        queryKey: ['courseReviews', courseId],
-      })
-    },
-    onError: () => setCoursePendingId(null),
-  })
+  const handleCourseRemoveUpvote = (reviewId: number) => {
+    if (!me) {
+      setCourseFeedback({ type: 'error', message: 'Login to manage upvotes.' })
+      return
+    }
+    setCourseUpvotedIds((prev) => {
+      const next = new Set(prev)
+      next.delete(reviewId)
+      return next
+    })
+  }
 
   const handleCourseSubmit = (event: React.FormEvent) => {
     event.preventDefault()
@@ -237,7 +233,6 @@ const CourseReviewsPage = () => {
   } | null>(null)
   const [teacherReportTarget, setTeacherReportTarget] = useState<TeacherReviewDto | null>(null)
   const [teacherReportReason, setTeacherReportReason] = useState('')
-  const [teacherPendingId, setTeacherPendingId] = useState<number | null>(null)
   const [teacherDeleteTarget, setTeacherDeleteTarget] = useState<TeacherReviewDto | null>(null)
   const createTeacherMutation = useMutation({
     mutationFn: (payload: {
@@ -311,37 +306,6 @@ const CourseReviewsPage = () => {
         queryKey: ['courseTeacherReviews', courseId, me?.id, me?.role],
       })
     },
-  })
-
-  const upvoteTeacherMutation = useMutation({
-    mutationFn: (id: number) => teacherReviewsApi.upvote(id),
-    onMutate: (id) => setTeacherPendingId(id),
-    onSuccess: (_, id) => {
-      setTeacherPendingId(null)
-      setUpvotedIds((prev) => new Set(prev).add(id))
-      setTeacherFeedback({ type: 'success', message: 'Upvoted.' })
-      void queryClient.invalidateQueries({
-        queryKey: ['courseTeacherReviews', courseId, me?.id, me?.role],
-      })
-    },
-    onError: () => setTeacherPendingId(null),
-  })
-  const removeUpvoteTeacherMutation = useMutation({
-    mutationFn: (id: number) => teacherReviewsApi.removeUpvote(id),
-    onMutate: (id) => setTeacherPendingId(id),
-    onSuccess: (data, id) => {
-      setTeacherPendingId(null)
-      setUpvotedIds((prev) => {
-        const next = new Set(prev)
-        next.delete(id)
-        return next
-      })
-      setTeacherFeedback({ type: 'success', message: 'Upvote removed.' })
-      void queryClient.invalidateQueries({
-        queryKey: ['courseTeacherReviews', courseId, me?.id, me?.role],
-      })
-    },
-    onError: () => setTeacherPendingId(null),
   })
 
   const teacherErrorMessage = (teacherError as { response?: { data?: ApiError } })?.response
@@ -428,8 +392,26 @@ const CourseReviewsPage = () => {
   }, [filteredTeacherReviews])
 
   const [selectedTeacherName, setSelectedTeacherName] = useState<string | null>(null)
-  const [upvotedIds, setUpvotedIds] = useState<Set<number>>(new Set())
+  const [teacherUpvotedIds, setTeacherUpvotedIds] = useState<Set<number>>(new Set())
   const teacherParam = searchParams.get('teacher')
+
+  const handleTeacherToggleUpvote = (reviewId: number) => {
+    if (!me) {
+      setTeacherFeedback({ type: 'error', message: 'Login to upvote reviews.' })
+      return
+    }
+    setTeacherUpvotedIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(reviewId)) {
+        next.delete(reviewId)
+        setTeacherFeedback({ type: 'success', message: 'Upvote removed.' })
+      } else {
+        next.add(reviewId)
+        setTeacherFeedback({ type: 'success', message: 'Upvoted.' })
+      }
+      return next
+    })
+  }
 
   useEffect(() => {
     if (groupByTeacher) return
@@ -531,7 +513,7 @@ const CourseReviewsPage = () => {
       setTeacherRating(5)
       setTeacherText('')
     }
-    setUpvotedIds(new Set())
+    setTeacherUpvotedIds(new Set())
   }, [selectedTeacherName, myTeacherReviewForSelected])
 
   useEffect(() => {
@@ -564,92 +546,102 @@ const CourseReviewsPage = () => {
   const courseTitle = course
     ? `${course.code} · ${course.name}`
     : `Course ID: ${params.courseId ?? params.id}`
+  const glassCardClass =
+    'border-white/40 bg-white/60 backdrop-blur-md shadow-[0_8px_30px_rgba(15,23,42,0.08)]'
 
   return (
-    <div className="space-y-6">
-      <PageHeader title="Course Reviews" subtitle={courseTitle} />
-
-      <div className="flex gap-2">
-        <Button
-          variant={activeTab === 'course' ? 'primary' : 'secondary'}
-          onClick={() => handleTabChange('course')}
-        >
-          Course Reviews
-        </Button>
-        <Button
-          variant={activeTab === 'teacher' ? 'primary' : 'secondary'}
-          onClick={() => handleTabChange('teacher')}
-        >
-          Teacher Reviews
-        </Button>
+    <div className="relative">
+      <div className="pointer-events-none absolute inset-0 -z-10">
+        <div className="absolute -top-32 left-1/2 h-72 w-72 -translate-x-1/2 rounded-full bg-ink/10 blur-3xl" />
+        <div className="absolute bottom-0 right-0 h-64 w-64 rounded-full bg-sky-200/40 blur-3xl" />
+        <div className="absolute top-24 left-6 h-56 w-56 rounded-full bg-purple-200/30 blur-3xl" />
       </div>
+      <div className="space-y-6">
+        <PageHeader title="Course Reviews" subtitle={courseTitle} />
 
-      {activeTab === 'course' ? (
-        <div className="space-y-6">
-          {courseFeedback ? (
-            <Alert
-              message={courseFeedback.message}
-              tone={courseFeedback.type === 'success' ? 'info' : 'error'}
-            />
-          ) : null}
+        <div className="flex gap-2">
+          <Button
+            variant={activeTab === 'course' ? 'primary' : 'secondary'}
+            onClick={() => handleTabChange('course')}
+          >
+            Course Reviews
+          </Button>
+          <Button
+            variant={activeTab === 'teacher' ? 'primary' : 'secondary'}
+            onClick={() => handleTabChange('teacher')}
+          >
+            Teacher Reviews
+          </Button>
+        </div>
 
-          {me?.role === 'STUDENT' ? (
-            <Card className="space-y-4">
-              <div className="space-y-1">
-                <h2 className="text-lg font-semibold text-gray-900">
-                  Write or edit your course review
-                </h2>
-                <p className="text-sm text-gray-600">
-                  Share your experience to help other students.
-                </p>
-              </div>
-              <form className="space-y-4" onSubmit={handleCourseSubmit}>
-                <div className="space-y-2">
-                  <span className="text-sm font-medium text-gray-700">Your rating</span>
-                  <div className="flex flex-wrap items-center gap-3">
-                    <StarRating value={courseRating} onChange={setCourseRating} size="lg" />
-                    <span className="text-sm text-gray-600">{courseRating}/5</span>
+        {activeTab === 'course' ? (
+          <div className="space-y-6">
+            {courseFeedback ? (
+              <Alert
+                message={courseFeedback.message}
+                tone={courseFeedback.type === 'success' ? 'info' : 'error'}
+              />
+            ) : null}
+
+            {me?.role === 'STUDENT' ? (
+              <Card className={`space-y-4 ${glassCardClass}`}>
+                <div className="space-y-1">
+                  <h2 className="text-lg font-semibold text-gray-900">
+                    Write or edit your course review
+                  </h2>
+                  <p className="text-sm text-gray-600">
+                    Share your experience to help other students.
+                  </p>
+                </div>
+                <form className="space-y-4" onSubmit={handleCourseSubmit}>
+                  <div className="space-y-2">
+                    <span className="text-sm font-medium text-gray-700">Your rating</span>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <StarRating value={courseRating} onChange={setCourseRating} size="lg" />
+                      <span className="text-sm text-gray-600">{courseRating}/5</span>
+                    </div>
+                    <input type="hidden" name="rating" value={courseRating} />
                   </div>
-                  <input type="hidden" name="rating" value={courseRating} />
-                </div>
-                <label className="block text-sm">
-                  <span className="mb-1 block font-medium">Review</span>
-                  <textarea
-                    className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/20"
-                    rows={4}
-                    value={courseText}
-                    onChange={(event) => setCourseText(event.target.value)}
-                    placeholder="Share your experience"
-                  />
-                </label>
-                <div className="flex gap-2">
-                  <Button
-                    type="submit"
-                    disabled={createCourseMutation.isPending || updateCourseMutation.isPending}
-                  >
-                    {myCourseReview ? 'Update Review' : 'Submit Review'}
-                  </Button>
-                  {myCourseReview ? (
+                  <label className="block text-sm">
+                    <span className="mb-1 block font-medium">Review</span>
+                    <textarea
+                      className="w-full rounded-md border border-gray-200 bg-white/80 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/20"
+                      rows={4}
+                      value={courseText}
+                      onChange={(event) => setCourseText(event.target.value)}
+                      placeholder="Share your experience"
+                    />
+                  </label>
+                  <div className="flex gap-2">
                     <Button
-                      variant="danger"
-                      type="button"
-                      onClick={() => deleteCourseMutation.mutate(myCourseReview.id)}
-                      disabled={deleteCourseMutation.isPending}
+                      type="submit"
+                      disabled={
+                        createCourseMutation.isPending || updateCourseMutation.isPending
+                      }
                     >
-                      {deleteCourseMutation.isPending ? 'Deleting...' : 'Delete'}
+                      {myCourseReview ? 'Update Review' : 'Submit Review'}
                     </Button>
-                  ) : null}
-                </div>
-              </form>
-            </Card>
-          ) : (
-            <Alert
-              message={
-                me ? 'Only students can write course reviews.' : 'Login to write a review.'
-              }
-              tone="info"
-            />
-          )}
+                    {myCourseReview ? (
+                      <Button
+                        variant="danger"
+                        type="button"
+                        onClick={() => deleteCourseMutation.mutate(myCourseReview.id)}
+                        disabled={deleteCourseMutation.isPending}
+                      >
+                        {deleteCourseMutation.isPending ? 'Deleting...' : 'Delete'}
+                      </Button>
+                    ) : null}
+                  </div>
+                </form>
+              </Card>
+            ) : (
+              <Alert
+                message={
+                  me ? 'Only students can write course reviews.' : 'Login to write a review.'
+                }
+                tone="info"
+              />
+            )}
 
           {isCourseLoading ? (
             <div className="flex min-h-[40vh] items-center justify-center">
@@ -671,12 +663,15 @@ const CourseReviewsPage = () => {
                   {sortedCourseReviews.length} reviews
                 </p>
                 <div className="flex items-center gap-2">
-                  <label className="text-xs font-semibold uppercase text-gray-500" htmlFor="course-sort">
+                  <label
+                    className="text-xs font-semibold uppercase text-gray-500"
+                    htmlFor="course-sort"
+                  >
                     Sort
                   </label>
                   <select
                     id="course-sort"
-                    className="rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900"
+                    className="rounded-md border border-gray-200 bg-white/80 px-3 py-2 text-sm text-gray-900"
                     value={courseSort}
                     onChange={(event) =>
                       setCourseSort(
@@ -691,58 +686,57 @@ const CourseReviewsPage = () => {
                   </select>
                 </div>
               </div>
-              {sortedCourseReviews.map((review) => (
-                <Card key={review.id} className="space-y-3">
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <StarRating value={review.rating} readOnly size="sm" />
-                      <span className="text-sm font-semibold text-gray-900">
-                        {review.rating}/5
+              {sortedCourseReviews.map((review) => {
+                const isUpvoted = courseUpvotedIds.has(review.id)
+                return (
+                  <Card key={review.id} className={`space-y-3 ${glassCardClass}`}>
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <div className="flex items-center gap-3">
+                        <StarRating value={review.rating} readOnly size="sm" />
+                        <span className="text-sm font-semibold text-gray-900">
+                          {review.rating}/5
+                        </span>
+                        <Badge label={review.status} variant={statusVariant(review.status)} />
+                      </div>
+                      <span className="text-xs text-gray-500">
+                        {formatDate(review.createdAt)}
                       </span>
-                      <Badge label={review.status} variant={statusVariant(review.status)} />
                     </div>
-                    <span className="text-xs text-gray-500">
-                      {formatDate(review.createdAt)}
-                    </span>
-                  </div>
-                  <p className="text-sm text-gray-700">{review.text}</p>
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      variant="secondary"
-                      onClick={() => upvoteCourseMutation.mutate(review.id)}
-                      disabled={coursePendingId === review.id && upvoteCourseMutation.isPending}
-                    >
-                      {coursePendingId === review.id && upvoteCourseMutation.isPending
-                        ? 'Upvoting...'
-                        : 'Upvote'}
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      onClick={() => removeUpvoteCourseMutation.mutate(review.id)}
-                      disabled={coursePendingId === review.id && removeUpvoteCourseMutation.isPending}
-                    >
-                      {coursePendingId === review.id && removeUpvoteCourseMutation.isPending
-                        ? 'Removing...'
-                        : 'Remove Upvote'}
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      onClick={() => setCourseReportTarget(review)}
-                    >
-                      Report
-                    </Button>
-                    {review.studentId === me?.id ? (
+                    <p className="text-sm text-gray-700">{review.text}</p>
+                    <div className="flex flex-wrap gap-2">
                       <Button
-                        variant="danger"
-                        onClick={() => deleteCourseMutation.mutate(review.id)}
-                        disabled={deleteCourseMutation.isPending}
+                        variant="secondary"
+                        onClick={() => handleCourseUpvote(review.id)}
+                        disabled={!me || isUpvoted}
                       >
-                        {deleteCourseMutation.isPending ? 'Deleting...' : 'Delete'}
+                        {isUpvoted ? 'Upvoted' : 'Upvote'}
                       </Button>
-                    ) : null}
-                  </div>
-                </Card>
-              ))}
+                      <Button
+                        variant="secondary"
+                        onClick={() => handleCourseRemoveUpvote(review.id)}
+                        disabled={!me || !isUpvoted}
+                      >
+                        Remove Upvote
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        onClick={() => setCourseReportTarget(review)}
+                      >
+                        Report
+                      </Button>
+                      {review.studentId === me?.id ? (
+                        <Button
+                          variant="danger"
+                          onClick={() => deleteCourseMutation.mutate(review.id)}
+                          disabled={deleteCourseMutation.isPending}
+                        >
+                          {deleteCourseMutation.isPending ? 'Deleting...' : 'Delete'}
+                        </Button>
+                      ) : null}
+                    </div>
+                  </Card>
+                )
+              })}
             </div>
           ) : (
             <EmptyState
@@ -807,7 +801,7 @@ const CourseReviewsPage = () => {
           ) : null}
 
           {me?.role === 'STUDENT' ? (
-            <Card className="space-y-4">
+            <Card className={`space-y-4 ${glassCardClass}`}>
               <div className="space-y-1">
                 <h2 className="text-lg font-semibold text-gray-900">
                   Write / Edit your review for this teacher
@@ -821,7 +815,7 @@ const CourseReviewsPage = () => {
                   label="Teacher name"
                   value={teacherName}
                   onChange={(event) => setTeacherName(event.target.value)}
-                  placeholder="e.g. Prof. Jane Doe"
+                  placeholder="e.g. Arjan Phyo"
                 />
                 <div className="space-y-2">
                   <span className="text-sm font-medium text-gray-700">Your rating</span>
@@ -834,7 +828,7 @@ const CourseReviewsPage = () => {
                 <label className="block text-sm">
                   <span className="mb-1 block font-medium">Review</span>
                   <textarea
-                    className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/20"
+                    className="w-full rounded-md border border-gray-200 bg-white/80 px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-ink focus:outline-none focus:ring-2 focus:ring-ink/20"
                     rows={4}
                     value={teacherText}
                     onChange={(event) => setTeacherText(event.target.value)}
@@ -882,7 +876,10 @@ const CourseReviewsPage = () => {
           {isTeacherLoading ? (
             <div className="space-y-4">
               {Array.from({ length: 3 }).map((_, index) => (
-                <Card key={`review-skeleton-${index}`} className="space-y-3">
+                <Card
+                  key={`review-skeleton-${index}`}
+                  className={`space-y-3 ${glassCardClass}`}
+                >
                   <div className="h-4 w-48 animate-pulse rounded bg-gray-200" />
                   <div className="h-3 w-full animate-pulse rounded bg-gray-100" />
                   <div className="h-3 w-2/3 animate-pulse rounded bg-gray-100" />
@@ -900,12 +897,15 @@ const CourseReviewsPage = () => {
             <div className="space-y-4">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
-                  <label className="text-xs font-semibold uppercase text-gray-500" htmlFor="teacher-sort">
+                  <label
+                    className="text-xs font-semibold uppercase text-gray-500"
+                    htmlFor="teacher-sort"
+                  >
                     Sort
                   </label>
                   <select
                     id="teacher-sort"
-                    className="rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900"
+                    className="rounded-md border border-gray-200 bg-white/80 px-3 py-2 text-sm text-gray-900"
                     value={teacherSort}
                     onChange={(event) =>
                       setTeacherSort(
@@ -933,7 +933,7 @@ const CourseReviewsPage = () => {
                     const isOpen = openGroups.has(group.normalized)
                     const reviews = sortReviews([...group.reviews])
                     return (
-                      <Card key={group.normalized} className="space-y-3">
+                      <Card key={group.normalized} className={`space-y-3 ${glassCardClass}`}>
                         <button
                           type="button"
                           className="flex w-full items-center justify-between text-left"
@@ -975,13 +975,12 @@ const CourseReviewsPage = () => {
                               const isUnderReview =
                                 review.status === 'UNDER_REVIEW' &&
                                 review.studentId === me?.id
-                              const isUpvotePending = teacherPendingId === review.id
-                              const isUpvoted = upvotedIds.has(review.id)
+                              const isUpvoted = teacherUpvotedIds.has(review.id)
                               const isVisible = review.status === 'VISIBLE'
                               return (
                                 <div
                                   key={review.id}
-                                  className="rounded-lg border border-gray-100 bg-gray-50 p-4"
+                                  className="rounded-lg border border-white/50 bg-white/70 p-4 backdrop-blur"
                                 >
                                   <div className="flex flex-wrap items-center justify-between gap-3">
                                     <div className="flex items-center gap-3">
@@ -1004,18 +1003,10 @@ const CourseReviewsPage = () => {
                                   <div className="mt-3 flex flex-wrap items-center gap-2">
                                     <Button
                                       variant="secondary"
-                                      onClick={() =>
-                                        isUpvoted
-                                          ? removeUpvoteTeacherMutation.mutate(review.id)
-                                          : upvoteTeacherMutation.mutate(review.id)
-                                      }
-                                      disabled={!isVisible || isUnderReview || isUpvotePending}
+                                      onClick={() => handleTeacherToggleUpvote(review.id)}
+                                      disabled={!isVisible || isUnderReview || !me}
                                     >
-                                      {isUpvotePending
-                                        ? 'Working...'
-                                        : isUpvoted
-                                          ? 'Remove Upvote'
-                                          : 'Upvote'}
+                                      {isUpvoted ? 'Remove Upvote' : 'Upvote'}
                                     </Button>
                                     <Button
                                       variant="secondary"
@@ -1044,7 +1035,7 @@ const CourseReviewsPage = () => {
                 </div>
               ) : (
                 <div className="grid gap-6 lg:grid-cols-[260px,1fr]">
-                  <Card className="space-y-3">
+                  <Card className={`space-y-3 ${glassCardClass}`}>
                     <div className="space-y-1">
                       <h3 className="text-sm font-semibold text-gray-900">Teachers</h3>
                       <p className="text-xs text-gray-600">
@@ -1082,7 +1073,7 @@ const CourseReviewsPage = () => {
 
                   <div className="space-y-4">
                     {selectedGroup ? (
-                      <Card className="space-y-4">
+                      <Card className={`space-y-4 ${glassCardClass}`}>
                         <div className="flex flex-wrap items-start justify-between gap-4">
                           <div>
                             <h3 className="text-lg font-semibold text-gray-900">
@@ -1107,12 +1098,11 @@ const CourseReviewsPage = () => {
                         {selectedReviews.map((review) => {
                           const isUnderReview =
                             review.status === 'UNDER_REVIEW' && review.studentId === me?.id
-                          const isUpvotePending = teacherPendingId === review.id
-                          const isUpvoted = upvotedIds.has(review.id)
+                          const isUpvoted = teacherUpvotedIds.has(review.id)
                           const isVisible = review.status === 'VISIBLE'
 
                           return (
-                            <Card key={review.id} className="space-y-3">
+                            <Card key={review.id} className={`space-y-3 ${glassCardClass}`}>
                               <div className="flex flex-wrap items-center justify-between gap-3">
                                 <div className="flex items-center gap-3">
                                   <StarRating value={review.rating} readOnly size="sm" />
@@ -1134,18 +1124,10 @@ const CourseReviewsPage = () => {
                               <div className="flex flex-wrap items-center gap-2">
                                 <Button
                                   variant="secondary"
-                                  onClick={() =>
-                                    isUpvoted
-                                      ? removeUpvoteTeacherMutation.mutate(review.id)
-                                      : upvoteTeacherMutation.mutate(review.id)
-                                  }
-                                  disabled={!isVisible || isUnderReview || isUpvotePending}
+                                  onClick={() => handleTeacherToggleUpvote(review.id)}
+                                  disabled={!isVisible || isUnderReview || !me}
                                 >
-                                  {isUpvotePending
-                                    ? 'Working...'
-                                    : isUpvoted
-                                      ? 'Remove Upvote'
-                                      : 'Upvote'}
+                                  {isUpvoted ? 'Remove Upvote' : 'Upvote'}
                                 </Button>
                                 <Button
                                   variant="secondary"
@@ -1261,6 +1243,7 @@ const CourseReviewsPage = () => {
           </Modal>
         </div>
       )}
+      </div>
     </div>
   )
 }

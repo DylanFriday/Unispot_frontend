@@ -11,6 +11,7 @@ import Alert from '../../components/Alert'
 import Spinner from '../../components/Spinner'
 import EmptyState from '../../components/EmptyState'
 import { formatBahtFromCents } from '../../utils/money'
+import { formatDate } from '../../utils/format'
 
 const headers = [
   'ID',
@@ -82,7 +83,7 @@ const StudySheetModerationPage = () => {
               <td className="px-4 py-3">
                 {sheet.price == null ? '-' : formatBahtFromCents(sheet.price)}
               </td>
-              <td className="px-4 py-3">{sheet.createdAt}</td>
+              <td className="px-4 py-3">{formatDate(sheet.createdAt)}</td>
               <td className="px-4 py-3">
                 <div className="flex flex-wrap gap-2">
                   <Button

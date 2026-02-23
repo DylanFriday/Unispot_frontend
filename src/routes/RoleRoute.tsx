@@ -1,11 +1,12 @@
 import { Navigate } from 'react-router-dom'
+import type { ReactElement } from 'react'
 import { useAuth } from '../auth/useAuth'
 import type { Role } from '../types/dto'
 import Spinner from '../components/Spinner'
 
 interface RoleRouteProps {
   allow: Role[]
-  children: JSX.Element
+  children: ReactElement
 }
 
 const RoleRoute = ({ allow, children }: RoleRouteProps) => {

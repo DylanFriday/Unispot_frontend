@@ -16,6 +16,7 @@ const schema = z.object({
   title: z.string().min(3, 'Title is required'),
   description: z.string().min(5, 'Description is required'),
   location: z.string().min(3, 'Location is required'),
+  lineId: z.string().optional(),
   rentCents: z.string().min(1, 'Rent is required'),
   depositCents: z.string().min(1, 'Deposit is required'),
   startDate: z.string().min(1, 'Start date is required'),
@@ -42,6 +43,7 @@ const StudentLeaseListingsNewPage = () => {
       title: string
       description: string
       location: string
+      lineId?: string | null
       rentCents: number
       depositCents: number
       startDate: string
@@ -53,10 +55,12 @@ const StudentLeaseListingsNewPage = () => {
   })
 
   const onSubmit = (values: FormValues) => {
+    const trimmedLineId = values.lineId?.trim() ?? ''
     mutation.mutate({
       title: values.title,
       description: values.description,
       location: values.location,
+      lineId: trimmedLineId || null,
       rentCents: toCents(values.rentCents),
       depositCents: toCents(values.depositCents),
       startDate: toIso(values.startDate),
@@ -91,6 +95,17 @@ const StudentLeaseListingsNewPage = () => {
             error={errors.location?.message}
             {...register('location')}
           />
+          <div className="space-y-1">
+            <Input
+              label="LINE ID (for contact)"
+              placeholder="yourlineid123"
+              error={errors.lineId?.message}
+              {...register('lineId')}
+            />
+            <p className="text-xs text-slate-500">
+              Buyers can contact you via LINE
+            </p>
+          </div>
           <div className="grid gap-4 md:grid-cols-2">
             <Input
               label="Rent (Baht)"

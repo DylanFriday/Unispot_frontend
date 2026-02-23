@@ -8,12 +8,20 @@ import { redirectForRole } from '../auth/AuthProvider'
 const HomePage = () => {
   const { me, token } = useAuth()
   const destination = me ? redirectForRole(me.role) : null
+  const cachedDisplayName = localStorage.getItem('display_name') ?? ''
+  const displayName =
+    me?.name?.trim() ||
+    me?.fullName?.trim() ||
+    me?.username?.trim() ||
+    (me?.email ? me.email.split('@')[0] : '') ||
+    cachedDisplayName ||
+    (me ? `User ${me.id}` : '')
 
   return (
     <div className="space-y-6">
       <Card>
         <h1 className="text-2xl font-semibold text-gray-900">
-          UniSpot Frontend
+          {token && me ? displayName : 'UniSpot Frontend'}
         </h1>
         <p className="mt-2 text-sm text-gray-600">
           Minimal foundation for authentication and routing.

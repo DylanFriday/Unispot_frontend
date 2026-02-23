@@ -9,6 +9,7 @@ import Button from '../../components/Button'
 import Alert from '../../components/Alert'
 import Spinner from '../../components/Spinner'
 import EmptyState from '../../components/EmptyState'
+import { formatDate } from '../../utils/format'
 
 const statusOptions: PaymentStatus[] = ['PENDING', 'APPROVED', 'RELEASED']
 
@@ -129,7 +130,7 @@ const PaymentsPage = () => {
               <td className="px-4 py-3">
                 <Badge label={payment.status} variant={statusVariant(payment.status)} />
               </td>
-              <td className="px-4 py-3">{payment.createdAt}</td>
+              <td className="px-4 py-3">{formatDate(payment.createdAt)}</td>
               <td className="px-4 py-3">{renderActions(payment)}</td>
             </tr>
           ))}

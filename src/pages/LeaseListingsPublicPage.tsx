@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { leaseListingsApi } from '../api/leaseListings.api'
 import type { ApiError } from '../types/dto'
 import { useAuth } from '../auth/useAuth'
@@ -10,41 +10,57 @@ import Alert from '../components/Alert'
 import Spinner from '../components/Spinner'
 import EmptyState from '../components/EmptyState'
 import { formatBahtFromCents } from '../utils/money'
+import { formatDate } from '../utils/format'
 
 const formatCents = (value: number) => formatBahtFromCents(value)
 
 const LeaseListingsPublicPage = () => {
   const { me } = useAuth()
-  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [feedback, setFeedback] = useState<Record<number, { type: 'success' | 'error'; message: string }>>({})
+  const [copiedId, setCopiedId] = useState<number | null>(null)
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['lease-listings'],
     queryFn: () => leaseListingsApi.list(),
   })
 
-  const interestMutation = useMutation({
-    mutationFn: (id: number) => leaseListingsApi.interest(id),
-    onSuccess: () => {
-      setSuccessMessage('Interest submitted successfully.')
-      setTimeout(() => setSuccessMessage(null), 2500)
-    },
-  })
-
   const errorMessage = (error as { response?: { data?: ApiError } })?.response
     ?.data?.message
-  const interestError = (interestMutation.error as {
-    response?: { data?: ApiError }
-  })?.response?.data?.message
+
+  const openLineContact = (lineId: string) => {
+    const encodedLineId = encodeURIComponent(lineId)
+    const deepLink = `line://ti/p/~${encodedLineId}`
+    const fallbackLink = `https://line.me/R/ti/p/~${encodedLineId}`
+
+    window.location.href = deepLink
+    window.setTimeout(() => {
+      window.location.href = fallbackLink
+    }, 700)
+  }
+
+  const copyLineId = async (listingId: number, lineId: string) => {
+    try {
+      await navigator.clipboard.writeText(lineId)
+      setCopiedId(listingId)
+      setFeedback((prev) => ({
+        ...prev,
+        [listingId]: { type: 'success', message: 'Copied!' },
+      }))
+      window.setTimeout(() => setCopiedId((prev) => (prev === listingId ? null : prev)), 1500)
+    } catch {
+      setFeedback((prev) => ({
+        ...prev,
+        [listingId]: { type: 'error', message: 'Failed to copy LINE ID.' },
+      }))
+    }
+  }
 
   return (
     <div className="space-y-6">
       <PageHeader
         title="Lease Listings"
-        subtitle="Browse approved lease listings and express interest."
+        subtitle="Browse approved lease listings and contact owners via LINE."
       />
-
-      {successMessage ? <Alert message={successMessage} tone="info" /> : null}
-      {interestError ? <Alert message={interestError} tone="error" /> : null}
 
       {isLoading ? (
         <div className="flex min-h-[40vh] items-center justify-center">
@@ -64,21 +80,53 @@ const LeaseListingsPublicPage = () => {
               </div>
               <div className="text-sm text-gray-600">
                 <p>Location: {listing.location}</p>
+                <p>
+                  Contact (LINE):{' '}
+                  {listing.lineId?.trim() ? listing.lineId : 'Not provided'}
+                </p>
                 <p>Rent: {formatCents(listing.rentCents)}</p>
                 <p>Deposit: {formatCents(listing.depositCents)}</p>
                 <p>
-                  Available: {listing.startDate} → {listing.endDate}
+                  Available: {formatDate(listing.startDate, { dateStyle: 'medium' })} → {formatDate(listing.endDate, { dateStyle: 'medium' })}
                 </p>
               </div>
+              {feedback[listing.id] ? (
+                <Alert
+                  message={feedback[listing.id].message}
+                  tone={feedback[listing.id].type === 'success' ? 'info' : 'error'}
+                />
+              ) : null}
               {me?.role === 'STUDENT' ? (
-                <Button
-                  onClick={() => interestMutation.mutate(listing.id)}
-                  disabled={interestMutation.isPending}
-                >
-                  {interestMutation.isPending
-                    ? 'Submitting...'
-                    : 'Express interest'}
-                </Button>
+                <div className="space-y-2">
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      onClick={() =>
+                        listing.lineId?.trim() && openLineContact(listing.lineId.trim())
+                      }
+                      disabled={!listing.lineId?.trim()}
+                    >
+                      Contact Owner
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() =>
+                        listing.lineId?.trim() &&
+                        copyLineId(listing.id, listing.lineId.trim())
+                      }
+                      disabled={!listing.lineId?.trim()}
+                    >
+                      Copy LINE ID
+                    </Button>
+                  </div>
+                  {!listing.lineId?.trim() ? (
+                    <p className="text-xs text-gray-500">
+                      Owner didn&apos;t provide LINE ID.
+                    </p>
+                  ) : null}
+                  {copiedId === listing.id ? (
+                    <p className="text-xs text-emerald-700">Copied!</p>
+                  ) : null}
+                </div>
               ) : null}
             </Card>
           ))}

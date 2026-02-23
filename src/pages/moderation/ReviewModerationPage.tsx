@@ -9,6 +9,7 @@ import Button from '../../components/Button'
 import Alert from '../../components/Alert'
 import Spinner from '../../components/Spinner'
 import EmptyState from '../../components/EmptyState'
+import { formatDate } from '../../utils/format'
 
 const statusOptions = ['UNDER_REVIEW', 'VISIBLE', 'REMOVED'] as const
 
@@ -101,7 +102,7 @@ const ReviewModerationPage = () => {
               <td className="px-4 py-3">
                 <Badge label={review.status} variant={statusVariant(review.status)} />
               </td>
-              <td className="px-4 py-3">{review.createdAt}</td>
+              <td className="px-4 py-3">{formatDate(review.createdAt)}</td>
               <td className="px-4 py-3">
                 <div className="flex flex-wrap gap-2">
                   {status === 'UNDER_REVIEW' ? (

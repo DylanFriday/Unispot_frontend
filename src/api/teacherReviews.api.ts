@@ -44,4 +44,8 @@ export const teacherReviewsApi = {
     const response = await http.delete(`/teacher-reviews/${id}/upvote`)
     return response.data
   },
+  listMine: async () => {
+    const response = await http.get<TeacherReviewDto[]>('/teacher-reviews/mine')
+    return response.data
+  },
 }
