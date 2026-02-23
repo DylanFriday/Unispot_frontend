@@ -20,6 +20,7 @@ const Sidebar = ({ mobileOpen, onCloseMobile }: SidebarProps) => {
 
   const isModerationRoute =
     location.pathname.startsWith('/moderation') ||
+    location.pathname.startsWith('/admin/payments') ||
     location.pathname.startsWith('/admin/withdrawals')
   const [moderationOpen, setModerationOpen] = useState(isModerationRoute)
 
@@ -54,7 +55,10 @@ const Sidebar = ({ mobileOpen, onCloseMobile }: SidebarProps) => {
     { to: '/moderation/teacher-reviews', label: 'Teacher Reviews', icon: '•' },
     { to: '/moderation/lease-listings', label: 'Lease Listings', icon: '•' },
     ...(me.role === 'ADMIN'
-      ? ([{ to: '/admin/withdrawals', label: 'Withdrawals', icon: '•' }] as NavItem[])
+      ? ([
+          { to: '/admin/payments', label: 'Payments', icon: '•' },
+          { to: '/admin/withdrawals', label: 'Withdrawals', icon: '•' },
+        ] as NavItem[])
       : []),
   ]
 

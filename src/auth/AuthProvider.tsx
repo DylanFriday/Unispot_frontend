@@ -9,6 +9,18 @@ import type { MeResponse, Role } from '../types/dto'
 import { authApi } from '../api/auth.api'
 
 const DISPLAY_NAME_KEY = 'display_name'
+const ROLE_SET = new Set<Role>(['STUDENT', 'STAFF', 'ADMIN'])
+
+interface JwtPayload {
+  sub?: string | number
+  id?: string | number
+  userId?: string | number
+  role?: string
+  email?: string
+  name?: string
+  fullName?: string
+  username?: string
+}
 
 interface AuthContextValue {
   token: string | null
@@ -30,6 +42,45 @@ const getRedirectPath = (role: Role) => {
   return '/dashboard'
 }
 
+const decodeJwtPayload = (token: string): JwtPayload | null => {
+  const [, encodedPayload] = token.split('.')
+  if (!encodedPayload) return null
+  try {
+    const base64 = encodedPayload.replace(/-/g, '+').replace(/_/g, '/')
+    const normalized = base64.padEnd(base64.length + ((4 - (base64.length % 4)) % 4), '=')
+    const raw = atob(normalized)
+    return JSON.parse(raw) as JwtPayload
+  } catch {
+    return null
+  }
+}
+
+const getRoleFromPayload = (payload: JwtPayload | null): Role | null => {
+  const raw = payload?.role?.toUpperCase()
+  if (!raw) return null
+  return ROLE_SET.has(raw as Role) ? (raw as Role) : null
+}
+
+const getIdFromPayload = (payload: JwtPayload | null) => {
+  const raw = payload?.id ?? payload?.userId ?? payload?.sub
+  const parsed = Number(raw)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+const resolveMeFromToken = (token: string): MeResponse | null => {
+  const payload = decodeJwtPayload(token)
+  const role = getRoleFromPayload(payload)
+  if (!role) return null
+  return {
+    id: getIdFromPayload(payload),
+    role,
+    name: payload?.name,
+    fullName: payload?.fullName,
+    username: payload?.username,
+    email: payload?.email,
+  }
+}
+
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [token, setToken] = useState<string | null>(
     localStorage.getItem('access_token')
@@ -44,7 +95,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     setMe(null)
   }, [])
 
-  const loadMe = useCallback(async () => {
+  const loadMe = useCallback(async (tokenOverride?: string | null) => {
+    const activeToken = tokenOverride ?? token
     try {
       const response = await authApi.me()
       setMe(response)
@@ -58,10 +110,25 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
       return response.role
     } catch {
+      if (activeToken) {
+        const fallbackMe = resolveMeFromToken(activeToken)
+        if (fallbackMe) {
+          setMe(fallbackMe)
+          const resolvedName =
+            fallbackMe.name?.trim() ||
+            fallbackMe.fullName?.trim() ||
+            fallbackMe.username?.trim() ||
+            (fallbackMe.email ? fallbackMe.email.split('@')[0] : '')
+          if (resolvedName) {
+            localStorage.setItem(DISPLAY_NAME_KEY, resolvedName)
+          }
+          return fallbackMe.role
+        }
+      }
       logout()
       return null
     }
-  }, [logout])
+  }, [logout, token])
 
   useEffect(() => {
     const init = async () => {
@@ -74,7 +141,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         return
       }
       setLoading(true)
-      await loadMe()
+      await loadMe(token)
       setLoading(false)
     }
 
@@ -85,7 +152,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     const response = await authApi.login({ email, password })
     localStorage.setItem('access_token', response.access_token)
     setToken(response.access_token)
-    const role = await loadMe()
+    const role = await loadMe(response.access_token)
     if (!role) {
       throw new Error('Unable to load profile')
     }
@@ -98,7 +165,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       localStorage.setItem('access_token', response.access_token)
       localStorage.setItem(DISPLAY_NAME_KEY, name.trim())
       setToken(response.access_token)
-      const role = await loadMe()
+      const role = await loadMe(response.access_token)
       if (!role) {
         throw new Error('Unable to load profile')
       }

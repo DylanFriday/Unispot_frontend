@@ -10,7 +10,9 @@ import {
   XAxis,
   YAxis,
 } from 'recharts'
+import { useAuth } from '../../auth/useAuth'
 import { moderationApi } from '../../api/moderation.api'
+import { leaseModerationApi } from '../../api/leaseModeration.api'
 import { reviewModerationApi } from '../../api/reviewModeration.api'
 import { teacherReviewModerationApi } from '../../api/teacherReviewModeration.api'
 import { paymentsApi } from '../../api/payments.api'
@@ -53,9 +55,17 @@ const collectAdminPayments = (...groups: (AdminPaymentDto[] | undefined)[]) =>
     }, new Map<number, AdminPaymentDto>())
 
 const AdminDashboard = () => {
+  const { me } = useAuth()
+  const isAdmin = me?.role === 'ADMIN'
+
   const pendingStudySheetsQuery = useQuery({
     queryKey: ['dashboard', 'admin', 'moderation', 'studySheets', 'pending'],
     queryFn: moderationApi.listPendingStudySheets,
+  })
+
+  const pendingLeaseListingsQuery = useQuery({
+    queryKey: ['dashboard', 'admin', 'moderation', 'leaseListings', 'pending'],
+    queryFn: () => leaseModerationApi.listLeaseListings('PENDING'),
   })
 
   const reportedReviewsQuery = useQuery({
@@ -77,16 +87,19 @@ const AdminDashboard = () => {
   const pendingPaymentsQuery = useQuery({
     queryKey: ['dashboard', 'admin', 'payments', 'pending'],
     queryFn: () => paymentsApi.listPayments('PENDING'),
+    enabled: isAdmin,
   })
 
   const approvedPaymentsQuery = useQuery({
     queryKey: ['dashboard', 'admin', 'payments', 'approved'],
     queryFn: () => paymentsApi.listPayments('APPROVED'),
+    enabled: isAdmin,
   })
 
   const releasedPaymentsQuery = useQuery({
     queryKey: ['dashboard', 'admin', 'payments', 'released'],
     queryFn: () => paymentsApi.listPayments('RELEASED'),
+    enabled: isAdmin,
   })
 
   const publicStudySheetsQuery = useQuery({
@@ -102,49 +115,60 @@ const AdminDashboard = () => {
 
   const isLoading =
     pendingStudySheetsQuery.isLoading ||
+    pendingLeaseListingsQuery.isLoading ||
     reportedReviewsQuery.isLoading ||
-    pendingPaymentsQuery.isLoading ||
-    approvedPaymentsQuery.isLoading ||
-    releasedPaymentsQuery.isLoading
+    (isAdmin &&
+      (pendingPaymentsQuery.isLoading ||
+        approvedPaymentsQuery.isLoading ||
+        releasedPaymentsQuery.isLoading))
 
   const hasError =
     pendingStudySheetsQuery.isError ||
+    pendingLeaseListingsQuery.isError ||
     reportedReviewsQuery.isError ||
-    pendingPaymentsQuery.isError ||
-    approvedPaymentsQuery.isError ||
-    releasedPaymentsQuery.isError
+    (isAdmin &&
+      (pendingPaymentsQuery.isError ||
+        approvedPaymentsQuery.isError ||
+        releasedPaymentsQuery.isError))
 
   const errorMessage =
     ((pendingStudySheetsQuery.error as { response?: { data?: ApiError } } | null)
       ?.response?.data?.message ??
+      (pendingLeaseListingsQuery.error as { response?: { data?: ApiError } } | null)
+        ?.response?.data?.message ??
       (reportedReviewsQuery.error as { response?: { data?: ApiError } } | null)
         ?.response?.data?.message ??
-      (pendingPaymentsQuery.error as { response?: { data?: ApiError } } | null)
-        ?.response?.data?.message ??
-      (approvedPaymentsQuery.error as { response?: { data?: ApiError } } | null)
-        ?.response?.data?.message ??
-      (releasedPaymentsQuery.error as { response?: { data?: ApiError } } | null)
-        ?.response?.data?.message ??
+      (isAdmin
+        ? ((pendingPaymentsQuery.error as { response?: { data?: ApiError } } | null)
+            ?.response?.data?.message ??
+          (approvedPaymentsQuery.error as { response?: { data?: ApiError } } | null)
+            ?.response?.data?.message ??
+          (releasedPaymentsQuery.error as { response?: { data?: ApiError } } | null)
+            ?.response?.data?.message)
+        : null) ??
       'Failed to load dashboard data.') as string
 
   const allPayments = useMemo(
-    () =>
+    () => (isAdmin
+      ?
       Array.from(
         collectAdminPayments(
           pendingPaymentsQuery.data,
           approvedPaymentsQuery.data,
           releasedPaymentsQuery.data
         ).values()
-      ),
-    [approvedPaymentsQuery.data, pendingPaymentsQuery.data, releasedPaymentsQuery.data]
+      )
+      : []),
+    [approvedPaymentsQuery.data, isAdmin, pendingPaymentsQuery.data, releasedPaymentsQuery.data]
   )
 
   const totalRevenueTHB = useMemo(
-    () => (releasedPaymentsQuery.data ?? []).reduce((sum, item) => sum + item.amount / 100, 0),
-    [releasedPaymentsQuery.data]
+    () => (isAdmin ? (releasedPaymentsQuery.data ?? []).reduce((sum, item) => sum + item.amount / 100, 0) : 0),
+    [isAdmin, releasedPaymentsQuery.data]
   )
 
   const pendingModerations = (pendingStudySheetsQuery.data?.length ?? 0) +
+    (pendingLeaseListingsQuery.data?.length ?? 0) +
     (reportedReviewsQuery.data?.length ?? 0) +
     (teacherReviewsQuery.data?.length ?? 0)
 
@@ -163,11 +187,13 @@ const AdminDashboard = () => {
     }
     for (const item of publicStudySheetsQuery.data ?? []) ids.add(item.ownerId)
     for (const item of pendingStudySheetsQuery.data ?? []) ids.add(item.ownerId)
+    for (const item of pendingLeaseListingsQuery.data ?? []) ids.add(item.ownerId)
     for (const item of reportedReviewsQuery.data ?? []) ids.add(item.studentId)
     for (const item of teacherReviewsQuery.data ?? []) ids.add(item.studentId)
     return ids.size
   }, [
     allPayments,
+    pendingLeaseListingsQuery.data,
     pendingStudySheetsQuery.data,
     publicStudySheetsQuery.data,
     reportedReviewsQuery.data,
@@ -222,8 +248,12 @@ const AdminDashboard = () => {
   return (
     <div className="space-y-8">
       <PageHeader
-        title="Admin Dashboard"
-        subtitle="Professional overview of platform health, moderation, and revenue."
+        title={isAdmin ? 'Admin Dashboard' : 'Staff Dashboard'}
+        subtitle={
+          isAdmin
+            ? 'Professional overview of platform health, moderation, and revenue.'
+            : 'Professional overview of platform health and moderation.'
+        }
       />
 
       {isLoading ? (
@@ -242,11 +272,14 @@ const AdminDashboard = () => {
             variant="secondary"
             onClick={() => {
               void pendingStudySheetsQuery.refetch()
+              void pendingLeaseListingsQuery.refetch()
               void reportedReviewsQuery.refetch()
               void teacherReviewsQuery.refetch()
-              void pendingPaymentsQuery.refetch()
-              void approvedPaymentsQuery.refetch()
-              void releasedPaymentsQuery.refetch()
+              if (isAdmin) {
+                void pendingPaymentsQuery.refetch()
+                void approvedPaymentsQuery.refetch()
+                void releasedPaymentsQuery.refetch()
+              }
               void publicStudySheetsQuery.refetch()
             }}
           >
@@ -255,38 +288,49 @@ const AdminDashboard = () => {
         </div>
       ) : (
         <div className="space-y-8 transition-opacity duration-300">
-          <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+          <section className={`grid gap-4 md:grid-cols-2 ${isAdmin ? 'xl:grid-cols-4' : 'xl:grid-cols-3'}`}>
             <StatCard title="Total Users" value={numberFormatter.format(totalUsers)} tone="primary" />
             <StatCard title="Total Study Sheets" value={numberFormatter.format(totalStudySheets)} tone="success" />
-            <StatCard title="Total Revenue" value={currencyFormatter.format(totalRevenueTHB)} tone="warning" />
+            {isAdmin ? (
+              <StatCard title="Total Revenue" value={currencyFormatter.format(totalRevenueTHB)} tone="warning" />
+            ) : null}
             <StatCard title="Pending Moderations" value={numberFormatter.format(pendingModerations)} tone="danger" />
           </section>
 
-          <section>
-            <Card className="space-y-4 transition duration-200 hover:shadow-md">
-              <div>
-                <h2 className="text-lg font-semibold text-slate-900">Platform Revenue (Monthly)</h2>
-                <p className="text-sm text-slate-600">Released payments grouped by month.</p>
-              </div>
-              {releasedPaymentsQuery.isLoading ? (
-                <ChartSkeleton />
-              ) : monthlyRevenueData.length > 0 ? (
-                <div className="h-72 w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={monthlyRevenueData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" />
-                      <XAxis dataKey="month" tick={{ fill: '#334155', fontSize: 12 }} />
-                      <YAxis tick={{ fill: '#334155', fontSize: 12 }} />
-                      <Tooltip formatter={(value: number | undefined) => currencyFormatter.format(value ?? 0)} />
-                      <Bar dataKey="revenueTHB" fill="#16a34a" radius={[8, 8, 0, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
+          {isAdmin ? (
+            <section>
+              <Card className="space-y-4 transition duration-200 hover:shadow-md">
+                <div>
+                  <h2 className="text-lg font-semibold text-slate-900">Platform Revenue (Monthly)</h2>
+                  <p className="text-sm text-slate-600">Released payments grouped by month.</p>
                 </div>
-              ) : (
-                <p className="text-sm text-slate-600">No released revenue yet.</p>
-              )}
-            </Card>
-          </section>
+                {releasedPaymentsQuery.isLoading ? (
+                  <ChartSkeleton />
+                ) : monthlyRevenueData.length > 0 ? (
+                  <div className="h-72 w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={monthlyRevenueData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" />
+                        <XAxis dataKey="month" tick={{ fill: '#334155', fontSize: 12 }} />
+                        <YAxis tick={{ fill: '#334155', fontSize: 12 }} />
+                        <Tooltip formatter={(value: number | undefined) => currencyFormatter.format(value ?? 0)} />
+                        <Bar dataKey="revenueTHB" fill="#16a34a" radius={[8, 8, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                ) : (
+                  <p className="text-sm text-slate-600">No released revenue yet.</p>
+                )}
+              </Card>
+            </section>
+          ) : (
+            <section>
+              <Card className="space-y-2">
+                <h2 className="text-lg font-semibold text-slate-900">Payments</h2>
+                <p className="text-sm text-slate-600">Payments are available for Admin only.</p>
+              </Card>
+            </section>
+          )}
 
           <section className="space-y-4">
             <h2 className="text-lg font-semibold text-slate-900">Moderation Overview</h2>
@@ -309,10 +353,10 @@ const AdminDashboard = () => {
                   <p className="mt-2 text-3xl font-bold text-amber-700">{teacherReviewsQuery.data?.length ?? 0}</p>
                 </Card>
               </Link>
-              <Link to="/admin/withdrawals">
+              <Link to="/moderation/lease-listings">
                 <Card className="h-full transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
-                  <p className="text-sm text-slate-600">Pending Withdraw Requests</p>
-                  <p className="mt-2 text-3xl font-bold text-emerald-700">Soon</p>
+                  <p className="text-sm text-slate-600">Pending Lease Listings</p>
+                  <p className="mt-2 text-3xl font-bold text-emerald-700">{pendingLeaseListingsQuery.data?.length ?? 0}</p>
                 </Card>
               </Link>
             </div>
