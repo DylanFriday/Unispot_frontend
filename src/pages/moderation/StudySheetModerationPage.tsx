@@ -1,9 +1,10 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { moderationApi } from '../../api/moderation.api'
-import type { ApiError, StudySheetDto } from '../../types/dto'
+import type { ApiError, StudySheetDto, StudySheetStatus } from '../../types/dto'
 import PageHeader from '../../components/PageHeader'
 import Table from '../../components/Table'
+import Badge from '../../components/Badge'
 import Button from '../../components/Button'
 import Modal from '../../components/Modal'
 import Input from '../../components/Input'
@@ -13,32 +14,45 @@ import EmptyState from '../../components/EmptyState'
 import { formatBahtFromCents } from '../../utils/money'
 import { formatDate } from '../../utils/format'
 
+const statusOptions: StudySheetStatus[] = ['PENDING', 'APPROVED', 'REJECTED']
+
+const statusVariant = (status: StudySheetStatus) => {
+  if (status === 'PENDING') return 'warning'
+  if (status === 'APPROVED') return 'success'
+  return 'danger'
+}
+
 const headers = [
   'ID',
   'Title',
   'Course ID',
   'Owner ID',
-  'Price (cents)',
+  'Price (Baht)',
+  'Status',
   'Created At',
   'Actions',
 ]
 
 const StudySheetModerationPage = () => {
   const queryClient = useQueryClient()
+  const [status, setStatus] = useState<StudySheetStatus>('PENDING')
   const [rejectTarget, setRejectTarget] = useState<StudySheetDto | null>(null)
   const [rejectReason, setRejectReason] = useState('')
 
+  const queryKey = useMemo(
+    () => ['moderation', 'study-sheets', status],
+    [status]
+  )
+
   const { data, isLoading, error } = useQuery({
-    queryKey: ['moderation', 'study-sheets', 'pending'],
-    queryFn: () => moderationApi.listPendingStudySheets(),
+    queryKey,
+    queryFn: () => moderationApi.listStudySheets(status),
   })
 
   const approveMutation = useMutation({
     mutationFn: (id: number) => moderationApi.approveStudySheet(id),
     onSuccess: () => {
-      void queryClient.invalidateQueries({
-        queryKey: ['moderation', 'study-sheets', 'pending'],
-      })
+      void queryClient.invalidateQueries({ queryKey })
     },
   })
 
@@ -48,9 +62,7 @@ const StudySheetModerationPage = () => {
     onSuccess: () => {
       setRejectTarget(null)
       setRejectReason('')
-      void queryClient.invalidateQueries({
-        queryKey: ['moderation', 'study-sheets', 'pending'],
-      })
+      void queryClient.invalidateQueries({ queryKey })
     },
   })
 
@@ -61,7 +73,28 @@ const StudySheetModerationPage = () => {
     <div className="space-y-6">
       <PageHeader
         title="Study Sheet Moderation"
-        subtitle="Approve or reject pending study sheets."
+        subtitle="Review study sheets by moderation status."
+        action={
+          <div className="flex items-center gap-2">
+            <label className="text-sm font-medium text-gray-700" htmlFor="status">
+              Status
+            </label>
+            <select
+              id="status"
+              className="rounded-md border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900"
+              value={status}
+              onChange={(event) =>
+                setStatus(event.target.value as StudySheetStatus)
+              }
+            >
+              {statusOptions.map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+          </div>
+        }
       />
 
       {isLoading ? (
@@ -83,30 +116,37 @@ const StudySheetModerationPage = () => {
               <td className="px-4 py-3">
                 {sheet.price == null ? '-' : formatBahtFromCents(sheet.price)}
               </td>
+              <td className="px-4 py-3">
+                <Badge label={sheet.status} variant={statusVariant(sheet.status)} />
+              </td>
               <td className="px-4 py-3">{formatDate(sheet.createdAt)}</td>
               <td className="px-4 py-3">
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    onClick={() => approveMutation.mutate(sheet.id)}
-                    disabled={approveMutation.isPending}
-                  >
-                    {approveMutation.isPending ? 'Approving...' : 'Approve'}
-                  </Button>
-                  <Button
-                    variant="secondary"
-                    onClick={() => setRejectTarget(sheet)}
-                  >
-                    Reject
-                  </Button>
-                </div>
+                {sheet.status === 'PENDING' ? (
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      onClick={() => approveMutation.mutate(sheet.id)}
+                      disabled={approveMutation.isPending}
+                    >
+                      {approveMutation.isPending ? 'Approving...' : 'Approve'}
+                    </Button>
+                    <Button
+                      variant="secondary"
+                      onClick={() => setRejectTarget(sheet)}
+                    >
+                      Reject
+                    </Button>
+                  </div>
+                ) : (
+                  <span className="text-xs text-gray-400">No actions</span>
+                )}
               </td>
             </tr>
           ))}
         </Table>
       ) : (
         <EmptyState
-          title="No pending study sheets"
-          description="All pending study sheets have been reviewed."
+          title="No study sheets"
+          description="No study sheets found for this status."
         />
       )}
 

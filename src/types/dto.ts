@@ -54,7 +54,7 @@ export interface StudySheetDto {
   title: string
   description: string
   fileUrl: string
-  price: number
+  price: number | null
   status: StudySheetStatus
   createdAt: string
   updatedAt: string

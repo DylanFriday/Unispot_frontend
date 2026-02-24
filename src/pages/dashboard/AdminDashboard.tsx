@@ -60,7 +60,7 @@ const AdminDashboard = () => {
 
   const pendingStudySheetsQuery = useQuery({
     queryKey: ['dashboard', 'admin', 'moderation', 'studySheets', 'pending'],
-    queryFn: moderationApi.listPendingStudySheets,
+    queryFn: () => moderationApi.listStudySheets('PENDING'),
   })
 
   const pendingLeaseListingsQuery = useQuery({
