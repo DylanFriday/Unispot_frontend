@@ -18,13 +18,11 @@ const statusOptions: LeaseListingStatus[] = [
   'PENDING',
   'APPROVED',
   'REJECTED',
-  'TRANSFERRED',
 ]
 
 const statusVariant = (status: LeaseListingStatus) => {
   if (status === 'PENDING') return 'warning'
   if (status === 'APPROVED') return 'success'
-  if (status === 'TRANSFERRED') return 'info'
   return 'danger'
 }
 

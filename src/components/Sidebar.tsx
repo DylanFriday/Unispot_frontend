@@ -51,7 +51,6 @@ const Sidebar = ({ mobileOpen, onCloseMobile }: SidebarProps) => {
 
   const moderationItems: NavItem[] = [
     { to: '/moderation/study-sheets', label: 'Study Sheets', icon: '•' },
-    { to: '/moderation/reviews', label: 'Reviews', icon: '•' },
     { to: '/moderation/teacher-reviews', label: 'Teacher Reviews', icon: '•' },
     { to: '/moderation/lease-listings', label: 'Lease Listings', icon: '•' },
     ...(me.role === 'ADMIN'

@@ -22,7 +22,6 @@ import PaymentsPage from './pages/admin/PaymentsPage'
 import LeaseMarketplacePage from './pages/leases/LeaseMarketplacePage'
 import MyLeaseListingsPage from './pages/leases/MyLeaseListingsPage'
 import CoursesPage from './pages/courses/CoursesPage'
-import ReviewModerationPage from './pages/moderation/ReviewModerationPage'
 import TeacherReviewModerationPage from './pages/moderation/TeacherReviewModerationPage'
 import TeacherSuggestionModerationPage from './pages/moderation/TeacherSuggestionModerationPage'
 import WalletPage from './pages/wallet/WalletPage'
@@ -170,18 +169,6 @@ const App = () => {
               <RoleRoute allow={['STAFF', 'ADMIN']}>
                 <AppLayout>
                   <LeaseModerationPage />
-                </AppLayout>
-              </RoleRoute>
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/moderation/reviews"
-          element={
-            <ProtectedRoute>
-              <RoleRoute allow={['STAFF', 'ADMIN']}>
-                <AppLayout>
-                  <ReviewModerationPage />
                 </AppLayout>
               </RoleRoute>
             </ProtectedRoute>

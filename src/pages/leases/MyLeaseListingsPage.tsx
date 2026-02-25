@@ -20,7 +20,6 @@ import { formatDate } from '../../utils/format'
 const statusVariant = (status: string) => {
   if (status === 'APPROVED') return 'success'
   if (status === 'PENDING') return 'warning'
-  if (status === 'TRANSFERRED') return 'info'
   return 'danger'
 }
 
@@ -230,14 +229,12 @@ const MyLeaseListingsPage = () => {
                   <Button
                     variant="secondary"
                     onClick={() => openEdit(listing)}
-                    disabled={listing.status === 'TRANSFERRED'}
                   >
                     Edit
                   </Button>
                   <Button
                     variant="danger"
                     onClick={() => setDeleteTarget(listing)}
-                    disabled={listing.status === 'TRANSFERRED'}
                   >
                     Delete
                   </Button>

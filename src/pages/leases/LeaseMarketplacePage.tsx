@@ -16,7 +16,6 @@ import { formatDate } from '../../utils/format'
 const statusVariant = (status: string) => {
   if (status === 'APPROVED') return 'success'
   if (status === 'PENDING') return 'warning'
-  if (status === 'TRANSFERRED') return 'info'
   return 'danger'
 }
 

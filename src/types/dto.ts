@@ -83,7 +83,6 @@ export type LeaseListingStatus =
   | 'PENDING'
   | 'APPROVED'
   | 'REJECTED'
-  | 'TRANSFERRED'
 
 export interface LeaseListingDto {
   id: number

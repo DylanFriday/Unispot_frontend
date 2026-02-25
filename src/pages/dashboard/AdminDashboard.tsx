@@ -13,7 +13,6 @@ import {
 import { useAuth } from '../../auth/useAuth'
 import { moderationApi } from '../../api/moderation.api'
 import { leaseModerationApi } from '../../api/leaseModeration.api'
-import { reviewModerationApi } from '../../api/reviewModeration.api'
 import { teacherReviewModerationApi } from '../../api/teacherReviewModeration.api'
 import { paymentsApi } from '../../api/payments.api'
 import { studySheetsApi } from '../../api/studySheets.api'
@@ -68,11 +67,6 @@ const AdminDashboard = () => {
     queryFn: () => leaseModerationApi.listLeaseListings('PENDING'),
   })
 
-  const reportedReviewsQuery = useQuery({
-    queryKey: ['dashboard', 'admin', 'moderation', 'reviews', 'under-review'],
-    queryFn: () => reviewModerationApi.list('UNDER_REVIEW'),
-  })
-
   const teacherReviewsQuery = useQuery({
     queryKey: ['dashboard', 'admin', 'moderation', 'teacherReviews', 'under-review'],
     queryFn: async () => {
@@ -116,7 +110,6 @@ const AdminDashboard = () => {
   const isLoading =
     pendingStudySheetsQuery.isLoading ||
     pendingLeaseListingsQuery.isLoading ||
-    reportedReviewsQuery.isLoading ||
     (isAdmin &&
       (pendingPaymentsQuery.isLoading ||
         approvedPaymentsQuery.isLoading ||
@@ -125,7 +118,6 @@ const AdminDashboard = () => {
   const hasError =
     pendingStudySheetsQuery.isError ||
     pendingLeaseListingsQuery.isError ||
-    reportedReviewsQuery.isError ||
     (isAdmin &&
       (pendingPaymentsQuery.isError ||
         approvedPaymentsQuery.isError ||
@@ -135,8 +127,6 @@ const AdminDashboard = () => {
     ((pendingStudySheetsQuery.error as { response?: { data?: ApiError } } | null)
       ?.response?.data?.message ??
       (pendingLeaseListingsQuery.error as { response?: { data?: ApiError } } | null)
-        ?.response?.data?.message ??
-      (reportedReviewsQuery.error as { response?: { data?: ApiError } } | null)
         ?.response?.data?.message ??
       (isAdmin
         ? ((pendingPaymentsQuery.error as { response?: { data?: ApiError } } | null)
@@ -169,7 +159,6 @@ const AdminDashboard = () => {
 
   const pendingModerations = (pendingStudySheetsQuery.data?.length ?? 0) +
     (pendingLeaseListingsQuery.data?.length ?? 0) +
-    (reportedReviewsQuery.data?.length ?? 0) +
     (teacherReviewsQuery.data?.length ?? 0)
 
   const totalStudySheets = useMemo(() => {
@@ -188,7 +177,6 @@ const AdminDashboard = () => {
     for (const item of publicStudySheetsQuery.data ?? []) ids.add(item.ownerId)
     for (const item of pendingStudySheetsQuery.data ?? []) ids.add(item.ownerId)
     for (const item of pendingLeaseListingsQuery.data ?? []) ids.add(item.ownerId)
-    for (const item of reportedReviewsQuery.data ?? []) ids.add(item.studentId)
     for (const item of teacherReviewsQuery.data ?? []) ids.add(item.studentId)
     return ids.size
   }, [
@@ -196,7 +184,6 @@ const AdminDashboard = () => {
     pendingLeaseListingsQuery.data,
     pendingStudySheetsQuery.data,
     publicStudySheetsQuery.data,
-    reportedReviewsQuery.data,
     teacherReviewsQuery.data,
   ])
 
@@ -225,11 +212,6 @@ const AdminDashboard = () => {
           title: `New study sheet uploaded: ${item.title}`,
           createdAt: item.createdAt,
         })),
-        ...(reportedReviewsQuery.data ?? []).map((item) => ({
-          id: `review-${item.id}`,
-          title: `Course review reported (#${item.id})`,
-          createdAt: item.createdAt,
-        })),
         ...(teacherReviewsQuery.data ?? []).map((item) => ({
           id: `teacher-review-${item.id}`,
           title: `Teacher review reported (#${item.id})`,
@@ -240,7 +222,6 @@ const AdminDashboard = () => {
         .slice(0, 8),
     [
       pendingStudySheetsQuery.data,
-      reportedReviewsQuery.data,
       teacherReviewsQuery.data,
     ]
   )
@@ -273,7 +254,6 @@ const AdminDashboard = () => {
             onClick={() => {
               void pendingStudySheetsQuery.refetch()
               void pendingLeaseListingsQuery.refetch()
-              void reportedReviewsQuery.refetch()
               void teacherReviewsQuery.refetch()
               if (isAdmin) {
                 void pendingPaymentsQuery.refetch()
@@ -334,17 +314,11 @@ const AdminDashboard = () => {
 
           <section className="space-y-4">
             <h2 className="text-lg font-semibold text-slate-900">Moderation Overview</h2>
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
               <Link to="/moderation/study-sheets">
                 <Card className="h-full transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
                   <p className="text-sm text-slate-600">Pending Study Sheets</p>
                   <p className="mt-2 text-3xl font-bold text-blue-700">{pendingStudySheetsQuery.data?.length ?? 0}</p>
-                </Card>
-              </Link>
-              <Link to="/moderation/reviews">
-                <Card className="h-full transition duration-200 hover:-translate-y-0.5 hover:shadow-md">
-                  <p className="text-sm text-slate-600">Reported Course Reviews</p>
-                  <p className="mt-2 text-3xl font-bold text-rose-700">{reportedReviewsQuery.data?.length ?? 0}</p>
                 </Card>
               </Link>
               <Link to="/moderation/teacher-reviews">
