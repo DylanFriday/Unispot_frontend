@@ -13,6 +13,7 @@ import {
   YAxis,
 } from 'recharts'
 import { walletApi } from '../../api/wallet.api'
+import { dashboardApi } from '../../api/dashboard.api'
 import { studySheetsApi } from '../../api/studySheets.api'
 import { paymentsApi } from '../../api/payments.api'
 import { teacherReviewsApi } from '../../api/teacherReviews.api'
@@ -20,6 +21,7 @@ import type {
   ApiError,
   PaymentDto,
   ReviewDto,
+  StudentDashboardSummaryDto,
   StudySheetDto,
   TeacherReviewDto,
 } from '../../types/dto'
@@ -63,6 +65,82 @@ const formatDateTime = (value: string) => {
   return dateTimeFormatter.format(date)
 }
 
+const toNumber = (value: unknown) => {
+  if (typeof value === 'number' && Number.isFinite(value)) return value
+  if (typeof value === 'string') {
+    const parsed = Number(value)
+    if (Number.isFinite(parsed)) return parsed
+  }
+  return undefined
+}
+
+const toString = (value: unknown) => (typeof value === 'string' ? value : undefined)
+
+const normalizePayment = (value: unknown): PaymentDto | null => {
+  if (!value || typeof value !== 'object') return null
+  const row = value as Record<string, unknown>
+
+  const id = toNumber(row.id)
+  const amount =
+    toNumber(row.amount) ??
+    toNumber(row.amountCents) ??
+    toNumber(row.amount_cents)
+  const status = toString(row.status)
+  const createdAt =
+    toString(row.createdAt) ??
+    toString(row.created_at) ??
+    toString(row.updatedAt) ??
+    toString(row.updated_at)
+
+  if (!id || !amount || !status || !createdAt) return null
+
+  return {
+    id,
+    amount,
+    status: status as PaymentDto['status'],
+    createdAt,
+    buyerId: toNumber(row.buyerId) ?? toNumber(row.buyer_id),
+    sellerId: toNumber(row.sellerId) ?? toNumber(row.seller_id),
+    referenceCode: toString(row.referenceCode) ?? toString(row.reference_code),
+  }
+}
+
+const getSummarySalesCount = (summary: StudentDashboardSummaryDto | undefined) => {
+  const sales = summary?.mySales as Record<string, unknown> | undefined
+  if (!sales) return undefined
+  return (
+    toNumber(sales.totalSales) ??
+    toNumber(sales.total_sales) ??
+    toNumber(sales.totalTransactions) ??
+    toNumber(sales.total_transactions) ??
+    toNumber(sales.releasedTransactions) ??
+    toNumber(sales.released_transactions)
+  )
+}
+
+const getSummaryRecentSales = (summary: StudentDashboardSummaryDto | undefined) => {
+  const sales = summary?.mySales as Record<string, unknown> | undefined
+  if (!sales) return []
+
+  const candidates = [
+    sales.recentSales,
+    sales.recent_sales,
+    sales.sales,
+    sales.transactions,
+    sales.recentTransactions,
+    sales.recent_transactions,
+    sales.payments,
+  ]
+
+  for (const candidate of candidates) {
+    if (!Array.isArray(candidate)) continue
+    const normalized = candidate.map(normalizePayment).filter((item): item is PaymentDto => Boolean(item))
+    if (normalized.length > 0) return normalized
+  }
+
+  return []
+}
+
 const WalletIcon = () => (
   <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8">
     <path d="M4 7.5A2.5 2.5 0 0 1 6.5 5H18a2 2 0 0 1 2 2v1H7a2 2 0 1 0 0 4h13v1a2 2 0 0 1-2 2H6.5A2.5 2.5 0 0 1 4 12.5z" />
@@ -97,6 +175,11 @@ const StudentDashboard = () => {
   const walletQuery = useQuery({
     queryKey: ['walletSummary'],
     queryFn: walletApi.getWalletSummary,
+  })
+
+  const studentSummaryQuery = useQuery({
+    queryKey: ['studentDashboardSummary'],
+    queryFn: dashboardApi.getStudentSummary,
   })
 
   const studySheetsQuery = useQuery({
@@ -179,18 +262,34 @@ const StudentDashboard = () => {
     return walletQuery.data?.totalEarned ?? 0
   }, [paymentsMineQuery.data, walletQuery.data?.totalEarned])
 
-  const totalSales = useMemo(
-    () => (paymentsMineQuery.data ?? []).filter((item) => item.status === 'RELEASED').length,
-    [paymentsMineQuery.data]
+  const summarySalesCount = useMemo(
+    () => getSummarySalesCount(studentSummaryQuery.data),
+    [studentSummaryQuery.data]
   )
 
-  const recentSales = useMemo(
-    () =>
-      [...(paymentsMineQuery.data ?? [])]
-        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-        .slice(0, 5),
-    [paymentsMineQuery.data]
+  const totalSales = useMemo(() => {
+    if (typeof summarySalesCount === 'number') return summarySalesCount
+    return (paymentsMineQuery.data ?? []).filter(
+      (item) => item.status === 'APPROVED' || item.status === 'RELEASED'
+    ).length
+  }, [paymentsMineQuery.data, summarySalesCount])
+
+  const summaryRecentSales = useMemo(
+    () => getSummaryRecentSales(studentSummaryQuery.data),
+    [studentSummaryQuery.data]
   )
+
+  const recentSales = useMemo(() => {
+    if (summaryRecentSales.length > 0) {
+      return [...summaryRecentSales]
+        .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+        .slice(0, 5)
+    }
+    return [...(paymentsMineQuery.data ?? [])]
+      .filter((item) => item.status === 'APPROVED' || item.status === 'RELEASED')
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, 5)
+  }, [paymentsMineQuery.data, summaryRecentSales])
 
   const recentActions = useMemo(() => {
     const sheetActions = (studySheetsQuery.data ?? []).map((item: StudySheetDto): ActivityItem => ({
