@@ -22,6 +22,14 @@ const LoginPage = () => {
   const navigate = useNavigate()
   const { login } = useAuth()
   const [error, setError] = useState<string | null>(null)
+  const env = import.meta.env as Record<string, string | boolean | undefined>
+  const isDev = Boolean(env.DEV)
+  const adminEmail = String(
+    env.VITE_ADMIN_EMAIL ?? env.NEXT_PUBLIC_ADMIN_EMAIL ?? ''
+  ).trim()
+  const adminPassword = String(
+    env.VITE_ADMIN_PASSWORD ?? env.NEXT_PUBLIC_ADMIN_PASSWORD ?? ''
+  ).trim()
 
   const {
     register,
@@ -37,6 +45,21 @@ const LoginPage = () => {
     } catch (err) {
       const apiError = err as { response?: { data?: ApiError } }
       setError(apiError.response?.data?.message ?? 'Login failed')
+    }
+  }
+
+  const onDevAdminLogin = async () => {
+    setError(null)
+    if (!adminEmail || !adminPassword) {
+      setError('Set VITE_ADMIN_EMAIL and VITE_ADMIN_PASSWORD in your .env file')
+      return
+    }
+    try {
+      const role = await login(adminEmail, adminPassword)
+      navigate(redirectForRole(role), { replace: true })
+    } catch (err) {
+      const apiError = err as { response?: { data?: ApiError } }
+      setError(apiError.response?.data?.message ?? 'Dev admin login failed')
     }
   }
 
@@ -67,6 +90,16 @@ const LoginPage = () => {
             {isSubmitting ? 'Signing in...' : 'Login'}
           </Button>
         </form>
+        {isDev ? (
+          <Button
+            variant="secondary"
+            onClick={() => void onDevAdminLogin()}
+            disabled={isSubmitting}
+            className="w-full"
+          >
+            Login as Admin (DEV)
+          </Button>
+        ) : null}
         <p className="text-sm text-gray-600">
           No account?{' '}
           <Link to="/register" className="font-medium text-gray-900">

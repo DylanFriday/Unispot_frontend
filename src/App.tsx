@@ -29,6 +29,7 @@ import DashboardPage from './pages/dashboard/DashboardPage'
 import MyReviewsPage from './pages/reviews/MyReviewsPage'
 import AdminWithdrawalsPage from './pages/admin/AdminWithdrawalsPage'
 import ProfilePage from './pages/profile/ProfilePage'
+import ReportModerationPage from './pages/admin/ReportModerationPage'
 
 const App = () => {
   return (
@@ -229,6 +230,18 @@ const App = () => {
               <RoleRoute allow={['ADMIN']}>
                 <AppLayout>
                   <AdminWithdrawalsPage />
+                </AppLayout>
+              </RoleRoute>
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/reports"
+          element={
+            <ProtectedRoute>
+              <RoleRoute allow={['ADMIN']}>
+                <AppLayout>
+                  <ReportModerationPage />
                 </AppLayout>
               </RoleRoute>
             </ProtectedRoute>

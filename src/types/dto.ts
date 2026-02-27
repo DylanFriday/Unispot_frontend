@@ -245,3 +245,33 @@ export interface WithdrawalDto {
   createdAt: string
   updatedAt: string
 }
+
+export type ReportStatus = 'PENDING' | 'RESOLVED' | 'REJECTED'
+export type ReportTargetType = 'REVIEW' | 'TEACHER_REVIEW'
+
+export interface ReporterDto {
+  _id: string
+  name?: string
+  email?: string
+}
+
+export interface ReportTargetPreviewDto {
+  text?: string
+  rating?: number
+  createdAt?: string
+  authorId?: string | number
+  courseId?: string | number
+  teacherId?: string | number
+  [key: string]: unknown
+}
+
+export interface ReportDto {
+  _id: string
+  status: ReportStatus
+  reason?: string
+  createdAt: string
+  reporter: ReporterDto
+  targetType: ReportTargetType
+  targetId: string
+  targetPreview?: ReportTargetPreviewDto
+}

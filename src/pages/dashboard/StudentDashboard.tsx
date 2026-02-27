@@ -109,6 +109,8 @@ const getSummarySalesCount = (summary: StudentDashboardSummaryDto | undefined) =
   const sales = summary?.mySales as Record<string, unknown> | undefined
   if (!sales) return undefined
   return (
+    toNumber(sales.totalSalesCount) ??
+    toNumber(sales.total_sales_count) ??
     toNumber(sales.totalSales) ??
     toNumber(sales.total_sales) ??
     toNumber(sales.totalTransactions) ??
@@ -254,13 +256,19 @@ const StudentDashboard = () => {
   }, [monthlyRevenue])
 
   const totalEarningsCents = useMemo(() => {
+    const summarySales = studentSummaryQuery.data?.mySales as Record<string, unknown> | undefined
+    const salesAmountFromSummary =
+      toNumber(summarySales?.totalSalesAmountCents) ??
+      toNumber(summarySales?.total_sales_amount_cents)
+    if (typeof salesAmountFromSummary === 'number') return salesAmountFromSummary
+
     const payments = paymentsMineQuery.data ?? []
     const sumFromPayments = payments
       .filter((item) => item.status === 'APPROVED' || item.status === 'RELEASED')
       .reduce((sum, item) => sum + item.amount, 0)
     if (sumFromPayments > 0) return sumFromPayments
     return walletQuery.data?.totalEarned ?? 0
-  }, [paymentsMineQuery.data, walletQuery.data?.totalEarned])
+  }, [paymentsMineQuery.data, studentSummaryQuery.data?.mySales, walletQuery.data?.totalEarned])
 
   const summarySalesCount = useMemo(
     () => getSummarySalesCount(studentSummaryQuery.data),

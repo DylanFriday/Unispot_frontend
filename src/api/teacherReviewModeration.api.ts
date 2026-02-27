@@ -15,8 +15,16 @@ export const teacherReviewModerationApi = {
     return response.data
   },
   remove: async (id: number) => {
+    const token = localStorage.getItem('access_token')
     const response = await http.post<TeacherReviewDto>(
-      `/moderation/teacher-reviews/${id}/remove`
+      `/moderation/teacher-reviews/${id}/remove`,
+      {},
+      {
+        headers: {
+          'Content-Type': 'application/json',
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+      }
     )
     return response.data
   },

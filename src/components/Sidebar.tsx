@@ -21,7 +21,8 @@ const Sidebar = ({ mobileOpen, onCloseMobile }: SidebarProps) => {
   const isModerationRoute =
     location.pathname.startsWith('/moderation') ||
     location.pathname.startsWith('/admin/payments') ||
-    location.pathname.startsWith('/admin/withdrawals')
+    location.pathname.startsWith('/admin/withdrawals') ||
+    location.pathname.startsWith('/admin/reports')
   const [moderationOpen, setModerationOpen] = useState(isModerationRoute)
 
   useEffect(() => {
@@ -57,6 +58,7 @@ const Sidebar = ({ mobileOpen, onCloseMobile }: SidebarProps) => {
       ? ([
           { to: '/admin/payments', label: 'Payments', icon: '•' },
           { to: '/admin/withdrawals', label: 'Withdrawals', icon: '•' },
+          { to: '/admin/reports', label: 'Report Moderation', icon: '•' },
         ] as NavItem[])
       : []),
   ]

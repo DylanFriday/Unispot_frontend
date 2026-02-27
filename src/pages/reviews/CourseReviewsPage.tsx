@@ -75,6 +75,7 @@ const CourseReviewsPage = () => {
   } | null>(null)
   const [courseReportTarget, setCourseReportTarget] = useState<ReviewDto | null>(null)
   const [courseReportReason, setCourseReportReason] = useState('')
+  const [courseReportedIds, setCourseReportedIds] = useState<Set<number>>(new Set())
   const [courseUpvotedIds, setCourseUpvotedIds] = useState<Set<number>>(new Set())
   const [courseSort, setCourseSort] = useState<'newest' | 'oldest' | 'highest' | 'lowest'>(
     'newest'
@@ -135,13 +136,11 @@ const CourseReviewsPage = () => {
   const reportCourseMutation = useMutation({
     mutationFn: (payload: { id: number; reason?: string }) =>
       reviewsApi.report(payload.id, payload.reason ? { reason: payload.reason } : undefined),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       setCourseReportTarget(null)
       setCourseReportReason('')
+      setCourseReportedIds((prev) => new Set(prev).add(variables.id))
       setCourseFeedback({ type: 'success', message: 'Report submitted' })
-      void queryClient.invalidateQueries({
-        queryKey: ['courseReviews', courseId],
-      })
     },
   })
 
@@ -233,6 +232,7 @@ const CourseReviewsPage = () => {
   } | null>(null)
   const [teacherReportTarget, setTeacherReportTarget] = useState<TeacherReviewDto | null>(null)
   const [teacherReportReason, setTeacherReportReason] = useState('')
+  const [teacherReportedIds, setTeacherReportedIds] = useState<Set<number>>(new Set())
   const [teacherDeleteTarget, setTeacherDeleteTarget] = useState<TeacherReviewDto | null>(null)
   const createTeacherMutation = useMutation({
     mutationFn: (payload: {
@@ -298,13 +298,11 @@ const CourseReviewsPage = () => {
   const reportTeacherMutation = useMutation({
     mutationFn: (payload: { id: number; reason?: string }) =>
       teacherReviewsApi.report(payload.id, payload.reason ? { reason: payload.reason } : undefined),
-    onSuccess: () => {
+    onSuccess: (_, variables) => {
       setTeacherReportTarget(null)
       setTeacherReportReason('')
+      setTeacherReportedIds((prev) => new Set(prev).add(variables.id))
       setTeacherFeedback({ type: 'success', message: 'Report submitted' })
-      void queryClient.invalidateQueries({
-        queryKey: ['courseTeacherReviews', courseId, me?.id, me?.role],
-      })
     },
   })
 
@@ -321,13 +319,10 @@ const CourseReviewsPage = () => {
   const filteredTeacherReviews = useMemo(() => {
     if (!teacherReviews) return []
     if (me?.role === 'STUDENT') {
-      return teacherReviews.filter(
-        (review) =>
-          review.status === 'VISIBLE' || (me?.id && review.studentId === me.id)
-      )
+      return teacherReviews.filter((review) => review.status !== 'REMOVED')
     }
     return teacherReviews.filter((review) => review.status === 'VISIBLE')
-  }, [teacherReviews, me?.id, me?.role])
+  }, [teacherReviews, me?.role])
 
   const sortReviews = (reviews: TeacherReviewDto[]) => {
     const withIndex = reviews.map((review, index) => ({ review, index }))
@@ -688,6 +683,7 @@ const CourseReviewsPage = () => {
               </div>
               {sortedCourseReviews.map((review) => {
                 const isUpvoted = courseUpvotedIds.has(review.id)
+                const isReported = courseReportedIds.has(review.id)
                 return (
                   <Card key={review.id} className={`space-y-3 ${glassCardClass}`}>
                     <div className="flex flex-wrap items-center justify-between gap-3">
@@ -721,8 +717,9 @@ const CourseReviewsPage = () => {
                       <Button
                         variant="secondary"
                         onClick={() => setCourseReportTarget(review)}
+                        disabled={isReported}
                       >
-                        Report
+                        {isReported ? 'Reported (Pending)' : 'Report'}
                       </Button>
                       {review.studentId === me?.id ? (
                         <Button
@@ -977,6 +974,7 @@ const CourseReviewsPage = () => {
                                 review.studentId === me?.id
                               const isUpvoted = teacherUpvotedIds.has(review.id)
                               const isVisible = review.status === 'VISIBLE'
+                              const isReported = teacherReportedIds.has(review.id)
                               return (
                                 <div
                                   key={review.id}
@@ -1011,9 +1009,9 @@ const CourseReviewsPage = () => {
                                     <Button
                                       variant="secondary"
                                       onClick={() => setTeacherReportTarget(review)}
-                                      disabled={!isVisible || isUnderReview}
+                                      disabled={!isVisible || isUnderReview || isReported}
                                     >
-                                      Report
+                                      {isReported ? 'Reported (Pending)' : 'Report'}
                                     </Button>
                                     {review.studentId === me?.id ? (
                                       <Button
@@ -1100,6 +1098,7 @@ const CourseReviewsPage = () => {
                             review.status === 'UNDER_REVIEW' && review.studentId === me?.id
                           const isUpvoted = teacherUpvotedIds.has(review.id)
                           const isVisible = review.status === 'VISIBLE'
+                          const isReported = teacherReportedIds.has(review.id)
 
                           return (
                             <Card key={review.id} className={`space-y-3 ${glassCardClass}`}>
@@ -1132,9 +1131,9 @@ const CourseReviewsPage = () => {
                                 <Button
                                   variant="secondary"
                                   onClick={() => setTeacherReportTarget(review)}
-                                  disabled={!isVisible || isUnderReview}
+                                  disabled={!isVisible || isUnderReview || isReported}
                                 >
-                                  Report
+                                  {isReported ? 'Reported (Pending)' : 'Report'}
                                 </Button>
                                 {review.studentId === me?.id ? (
                                   <Button
