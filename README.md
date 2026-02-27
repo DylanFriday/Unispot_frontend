@@ -1,4 +1,4 @@
-<img width="1470" height="833" alt="Screenshot 2569-02-27 at 22 29 22" src="https://github.com/user-attachments/assets/07a8ab9b-d938-4b8c-8d7b-eb80633384fb" /># UniSpot Frontend
+# UniSpot Frontend
 
 A React + TypeScript single-page application for UniSpot that lets users discover courses, read/write reviews, browse and purchase study sheets, and manage lease listings with role-based access for students and admins.
 
