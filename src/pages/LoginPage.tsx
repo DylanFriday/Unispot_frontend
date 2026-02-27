@@ -23,13 +23,13 @@ const LoginPage = () => {
   const { login } = useAuth()
   const [error, setError] = useState<string | null>(null)
   const env = import.meta.env as Record<string, string | boolean | undefined>
-  const isDev = Boolean(env.DEV)
   const adminEmail = String(
     env.VITE_ADMIN_EMAIL ?? env.NEXT_PUBLIC_ADMIN_EMAIL ?? ''
   ).trim()
   const adminPassword = String(
     env.VITE_ADMIN_PASSWORD ?? env.NEXT_PUBLIC_ADMIN_PASSWORD ?? ''
   ).trim()
+  const showAdminQuickLogin = Boolean(adminEmail && adminPassword)
 
   const {
     register,
@@ -48,7 +48,7 @@ const LoginPage = () => {
     }
   }
 
-  const onDevAdminLogin = async () => {
+  const onAdminQuickLogin = async () => {
     setError(null)
     if (!adminEmail || !adminPassword) {
       setError('Set VITE_ADMIN_EMAIL and VITE_ADMIN_PASSWORD in your .env file')
@@ -59,7 +59,7 @@ const LoginPage = () => {
       navigate(redirectForRole(role), { replace: true })
     } catch (err) {
       const apiError = err as { response?: { data?: ApiError } }
-      setError(apiError.response?.data?.message ?? 'Dev admin login failed')
+      setError(apiError.response?.data?.message ?? 'Admin login failed')
     }
   }
 
@@ -90,14 +90,14 @@ const LoginPage = () => {
             {isSubmitting ? 'Signing in...' : 'Login'}
           </Button>
         </form>
-        {isDev ? (
+        {showAdminQuickLogin ? (
           <Button
             variant="secondary"
-            onClick={() => void onDevAdminLogin()}
+            onClick={() => void onAdminQuickLogin()}
             disabled={isSubmitting}
             className="w-full"
           >
-            Login as Admin (DEV)
+            Login as Admin
           </Button>
         ) : null}
         <p className="text-sm text-gray-600">
