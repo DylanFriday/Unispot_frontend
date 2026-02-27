@@ -22,15 +22,15 @@ A React + TypeScript single-page application for UniSpot that lets users discove
   </tbody>
 </table>
 
-## Tech Stack
+## Tech Stack (Full System)
 
-| Layer        | Technology |
-| ------------ | ---------- |
-| **Frontend** | React 19, TypeScript, Vite 7, React Router v7 |
-| **State**    | TanStack Query |
-| **HTTP**     | Axios (JWT Bearer interceptor + 401 redirect handler) |
-| **Forms**    | React Hook Form + Zod |
-| **UI**       | Tailwind CSS, Recharts, reusable shared components |
+| Layer            | Technology |
+| ---------------- | ---------- |
+| **Frontend**     | React 19, TypeScript, Vite 7, React Router v7, TanStack Query, Axios, Tailwind CSS, Recharts, React Hook Form, Zod |
+| **Backend**      | Next.js 16 (App Router API Routes), TypeScript, Zod |
+| **Database**     | MongoDB (Node `mongodb` driver) |
+| **Authentication** | JWT (`jsonwebtoken`/`jose`) + bcryptjs |
+| **Infra**        | Docker (frontend `Dockerfile` + Nginx config in frontend repo) |
 
 ---
 
@@ -290,16 +290,6 @@ VITE_ADMIN_PASSWORD=your_admin_password
 | `VITE_PROMPTPAY_PHONE` | Recommended | PromptPay phone/ID used to generate purchase QR payload on study sheets page. |
 | `VITE_ADMIN_EMAIL` | Optional | Enables one-click admin login button on login page. |
 | `VITE_ADMIN_PASSWORD` | Optional | Password paired with `VITE_ADMIN_EMAIL` for quick admin login. |
-
----
-
-## Backend Integration
-
-This frontend is wired for the UniSpot backend located on your machine at:
-
-`/Users/noey/Desktop/GitHub/Unispot_backend`
-
-Ensure backend CORS allows the frontend origin during local development.
 
 ---
 
