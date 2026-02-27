@@ -1,6 +1,6 @@
 # UniSpot Frontend
 
-A React + TypeScript single-page application for UniSpot that lets users discover courses, read/write reviews, browse and purchase study sheets, and manage lease listings with role-based access for students, staff, and admins.
+A React + TypeScript single-page application for UniSpot that lets users discover courses, read/write reviews, browse and purchase study sheets, and manage lease listings with role-based access for students and admins.
 
 <h2>Team Members</h2>
 <table>
@@ -37,14 +37,14 @@ A React + TypeScript single-page application for UniSpot that lets users discove
 ## Features
 
 - **Authentication** - Register/login flow with profile bootstrap via `/auth/me`.
-- **Role-Based Access** - Route protection for `STUDENT`, `STAFF`, and `ADMIN` using `ProtectedRoute` and `RoleRoute`.
+- **Role-Based Access** - Route protection for student and admin-side access using `ProtectedRoute` and `RoleRoute`.
 - **Course Reviews** - Browse courses and post/view course and teacher reviews.
 - **Study Sheet Marketplace** - Public listing, student-owned study sheet CRUD, and purchase flow.
 - **PromptPay QR Payment Support** - Study sheet purchases generate EMV payload + QR from `VITE_PROMPTPAY_PHONE`.
 - **Lease Marketplace** - Public lease listing browsing and student lease listing management.
 - **Dashboard + Wallet** - Shared dashboard landing and student wallet flow.
 - **Profile + My Reviews** - Authenticated profile management and student review history.
-- **Moderation Workspace** - Staff/admin moderation pages for study sheets, leases, teacher reviews, and teacher suggestions.
+- **Moderation Workspace** - Admin-side moderation pages for study sheets, leases, teacher reviews, and teacher suggestions.
 - **Admin Tools** - Payments, withdrawals, and report moderation routes.
 
 ---
@@ -172,7 +172,7 @@ Unispot_frontend/
 | Public | `/`, `/login`, `/register`, `/courses`, `/courses/:courseId/reviews`, `/study-sheets`, `/lease-listings`, `/leases` | Everyone |
 | Authenticated | `/dashboard`, `/profile`, `/student/*`, `/student/study-sheets/*`, `/student/lease-listings/*` | Any logged-in user |
 | Student only | `/study-sheets/create`, `/leases/mine`, `/wallet`, `/reviews/mine` | `STUDENT` |
-| Moderation | `/moderation/*`, `/moderation/study-sheets`, `/moderation/lease-listings`, `/moderation/teacher-reviews`, `/moderation/teacher-suggestions` | `STAFF` or `ADMIN` |
+| Moderation | `/moderation/*`, `/moderation/study-sheets`, `/moderation/lease-listings`, `/moderation/teacher-reviews`, `/moderation/teacher-suggestions` | Admin-side moderation access |
 | Admin | `/admin`, `/admin/payments`, `/admin/withdrawals`, `/admin/reports` | `ADMIN` |
 
 ---
@@ -245,3 +245,4 @@ Ensure backend CORS allows the frontend origin during local development.
 - Request interceptor injects `Authorization: Bearer <token>`.
 - On `401`, the client clears token and redirects to `/login`.
 - Post-auth landing redirects to `/dashboard` for all roles in current frontend logic.
+- Across frontend and backend code, moderation endpoints and pages are grouped under admin-side workflows.
