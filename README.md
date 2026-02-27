@@ -1,4 +1,4 @@
-# UniSpot Frontend
+<img width="1470" height="833" alt="Screenshot 2569-02-27 at 22 29 22" src="https://github.com/user-attachments/assets/07a8ab9b-d938-4b8c-8d7b-eb80633384fb" /># UniSpot Frontend
 
 A React + TypeScript single-page application for UniSpot that lets users discover courses, read/write reviews, browse and purchase study sheets, and manage lease listings with role-based access for students and admins.
 
@@ -53,55 +53,119 @@ A React + TypeScript single-page application for UniSpot that lets users discove
 
 ### Admin Login
 
-![Admin login](docs/screenshots/admin/admin-login.png)
+<img width="1470" height="833" alt="Screenshot 2569-02-27 at 22 27 31" src="https://github.com/user-attachments/assets/e48360e8-1c5d-4c24-b79b-a50007d6ce72" />
 
 ### Dashboard
 
-![Dashboard](docs/screenshots/admin/dashboard.png)
+<img width="1470" height="833" alt="Screenshot 2569-02-27 at 22 30 54" src="https://github.com/user-attachments/assets/e7d66247-0703-4097-a9a3-f12c264980a2" />
 
 ### Study Sheets
 
-![Study sheets](docs/screenshots/admin/study-sheets.png)
+<img width="1470" height="833" alt="Screenshot 2569-02-27 at 22 28 00" src="https://github.com/user-attachments/assets/bacaddde-ecd5-4e9a-a50a-6de4fbd95f4a" />
 
 ### Leases Marketplace
 
-![Leases marketplace](docs/screenshots/admin/leases-marketplace.png)
+<img width="1470" height="833" alt="Screenshot 2569-02-27 at 22 28 12" src="https://github.com/user-attachments/assets/90ed46f7-8447-4a4c-b971-8b424fbf323d" />
 
 ### Course Reviews (Course List)
 
-![Course reviews list](docs/screenshots/admin/course-reviews-list.png)
+<img width="1470" height="833" alt="Screenshot 2569-02-27 at 22 28 20" src="https://github.com/user-attachments/assets/91b28209-f4f9-4fe8-ae76-f53f9456f4e0" />
 
 ### Course Reviews (Detail)
 
-![Course reviews detail](docs/screenshots/admin/course-reviews-detail.png)
+<img width="1470" height="833" alt="Screenshot 2569-02-27 at 22 28 39" src="https://github.com/user-attachments/assets/34c975b9-3059-46cb-a311-b82dc5dc8920" />
 
 ### Study Sheet Moderation
 
-![Study sheet moderation](docs/screenshots/admin/mod-study-sheets.png)
+<img width="1470" height="833" alt="Screenshot 2569-02-27 at 22 29 13" src="https://github.com/user-attachments/assets/f8be6da8-be4e-4146-9805-6944e593d8c6" />
 
 ### Teacher Review Moderation
 
-![Teacher review moderation](docs/screenshots/admin/mod-teacher-reviews.png)
+<img width="1470" height="833" alt="Screenshot 2569-02-27 at 22 29 22" src="https://github.com/user-attachments/assets/89b92a7e-3ac6-4f3b-bceb-643e0f84747b" />
 
 ### Lease Moderation
 
-![Lease moderation](docs/screenshots/admin/mod-lease-listings.png)
+<img width="1470" height="833" alt="Screenshot 2569-02-27 at 22 29 30" src="https://github.com/user-attachments/assets/c36a3f74-5323-464c-af2e-de0fc1bd777c" />
 
 ### Payments
 
-![Payments](docs/screenshots/admin/payments.png)
+<img width="1470" height="833" alt="Screenshot 2569-02-27 at 22 29 36" src="https://github.com/user-attachments/assets/e1ecfefd-e781-480d-afe0-b3d87f7e0b8d" />
 
 ### Withdrawals
 
-![Withdrawals](docs/screenshots/admin/withdrawals.png)
+<img width="1470" height="833" alt="Screenshot 2569-02-27 at 22 29 50" src="https://github.com/user-attachments/assets/da33aaa1-e8d4-4f81-ab1e-0333a19a11f8" />
 
 ### Report Moderation
 
-![Report moderation](docs/screenshots/admin/report-moderation.png)
+<img width="1470" height="833" alt="Screenshot 2569-02-27 at 22 30 11" src="https://github.com/user-attachments/assets/e9375a74-b33b-4344-9ac8-f607d2181e13" />
 
 ### Profile
 
-![Profile](docs/screenshots/admin/profile.png)
+<img width="1470" height="833" alt="Screenshot 2569-02-27 at 22 30 25" src="https://github.com/user-attachments/assets/1d59062a-d36c-4823-b083-cf83ecb2ed64" />
+
+---
+
+## Student Side Screenshots
+
+### Register
+
+<img width="1470" height="833" alt="Screenshot 2569-02-27 at 23 43 12" src="https://github.com/user-attachments/assets/ecb2937d-9fb1-475f-8b88-877d07edf1b2" />
+
+### Dashboard
+
+<img width="1470" height="833" alt="Screenshot 2569-02-27 at 23 00 32" src="https://github.com/user-attachments/assets/36a7bb64-6fc0-4307-9299-32410e44db32" />
+
+### Study Sheets Marketplace
+
+<img width="1470" height="833" alt="Screenshot 2569-02-27 at 23 00 43" src="https://github.com/user-attachments/assets/a38515da-d78d-4524-9c69-17a5e1ae979d" />
+
+### Study Sheet Purchase Modal
+
+<img width="1470" height="833" alt="Screenshot 2569-02-27 at 23 44 07" src="https://github.com/user-attachments/assets/589c7a0f-1825-4b1a-b90a-ffa2735453c6" />
+
+### Leases Marketplace
+
+<img width="1470" height="833" alt="Screenshot 2569-02-27 at 23 44 15" src="https://github.com/user-attachments/assets/7c94d4c7-1e9e-4856-b575-6c476edba29c" />
+
+### Course Reviews (Course List)
+
+<img width="1470" height="833" alt="Screenshot 2569-02-27 at 23 44 31" src="https://github.com/user-attachments/assets/8eb38768-8fb9-46eb-95bb-218c75cfdca5" />
+
+### Course Reviews (Course Review Tab)
+
+<img width="1470" height="833" alt="Screenshot 2569-02-27 at 23 44 42" src="https://github.com/user-attachments/assets/42ed496b-dff2-4c72-bf91-5defea078efc" />
+
+### Course Reviews (Teacher Review Tab)
+
+<img width="1470" height="833" alt="Screenshot 2569-02-27 at 23 44 52" src="https://github.com/user-attachments/assets/a8c7ffd8-2689-452c-b99f-83f037573135" />
+
+### My Study Sheets (My Uploads)
+
+<img width="1470" height="833" alt="Screenshot 2569-02-27 at 23 45 10" src="https://github.com/user-attachments/assets/1a14dbc8-4654-4475-8aa1-ee072132c039" />
+
+### My Study Sheets (Purchased)
+
+<img width="1470" height="833" alt="Screenshot 2569-02-27 at 23 45 18" src="https://github.com/user-attachments/assets/ced785e0-8c16-4442-bcf2-04ec6e5f5d5b" />
+
+### Create New Study Sheet
+
+<img width="1470" height="833" alt="Screenshot 2569-02-27 at 23 45 46" src="https://github.com/user-attachments/assets/a060a02e-f6ec-40e5-8914-fdc7a3ec3c50" />
+
+### My Lease Listings
+
+<img width="1470" height="833" alt="Screenshot 2569-02-27 at 23 49 18" src="https://github.com/user-attachments/assets/f4b3a08e-c4ec-4417-97d6-9e9487edc640" />
+
+### Create New Lease Listing
+
+<img width="1470" height="833" alt="Screenshot 2569-02-27 at 23 45 56" src="https://github.com/user-attachments/assets/a0d43221-c100-414b-b9e3-76858f1174a4" />
+
+### Wallet
+
+<img width="1470" height="833" alt="Screenshot 2569-02-27 at 23 46 04" src="https://github.com/user-attachments/assets/4db93fe0-b44f-4a2f-80e3-6a8432a78594" />
+
+### My Profile
+
+<img width="1470" height="833" alt="Screenshot 2569-02-27 at 23 46 15" src="https://github.com/user-attachments/assets/bc8b95d3-1952-4e98-a6c8-0581c4b6e5d9" />
 
 ---
 
